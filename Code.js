@@ -1,54 +1,70 @@
-var GEMINI_API_KEY = "AIzaSyASzdzrmN3xqhGwM87X0WqsHZ5enCFuBC0"; 
+var GEMINI_API_KEYS = [
+  "AIzaSyASzdzrmN3xqhGwM87X0WqsHZ5enCFuBC0", // Key 1
+  "AIzaSyAW9V1C6bjXgE2EzTpwrr15a4eyYLdW6WE",  // Key 2
+  "AIzaSyAcuP3BIF5oKfJGtn7FmOuNlUel0po16GE"
+];
 var GOOGLE_DOC_ID = "1cObuEeUbwHTpA05WoHQVymlDMVr-ZR0KVzLjSsWkvC0";
+var GOOGLE_TXT_ID = "1tx6FwdLdDi9Lzl-Ghk780X58XbGm7VLg"; // Your Text File ID
+var ssmi_link = "https://ssmilaos.com/or-structure-headoffice/";
+var products_link = "https://ssmilaos.com/our-products/loan/";
 var GOOGLE_SHEET_ID = "1Ipsf6-ryft-AhsyhUhGa3hT7dlDbH7rO2Eu_E8HJX1A";
 var GEMINI_MODEL = "gemini-2.5-flash";
 var USER_SHEET_NAME = "Users"; 
 var LOG_SHEET_NAME = "Logs";   
 
 // ==========================================
-// 1. ฟังก์ชันหลัก (รับคำสั่งจากเว็บ)
+// 1. Main Function (Handle Web Requests)
 // ==========================================
 function doPost(e) {
   try {
     var requestData = JSON.parse(e.postData.contents);
     var action = requestData.action; 
 
-    // --- ส่วนที่ 1: จัดการการ Login ---
+    // Login logic
     if (action === "login") {
       return handleLogin(requestData.username, requestData.password);
     }
 
-    // --- ส่วนที่ 2: ดึงประวัติโหลดหน้าแชทครั้งแรก ---
+    // History logic
     if (action === "getHistory") { 
       return getChatHistory(requestData.userId); 
     }
 
-    // --- ส่วนที่ 3: จัดการการ Chat ---
+    // Chat logic
     if (action === "chat") {
       var userMessage = requestData.message;
       var userId = requestData.userId || "Unknown";
       var userName = requestData.userName || "ພະນັກງານ";
 
-      // 3.1 อ่านสมอง (Google Docs) - ดึงมาทั้งเล่มเลย เพราะ AI อ่านไหว!
+      // 3.1 Fetch Context from all sources
       var docContext = readGoogleDocContent();
-      if (!docContext) {
-        return createJsonResponse({ error: "ບໍ່ສາມາດອ່ານຂໍ້ມູນຈາກ Google Docs ໄດ້" });
+      var txtContext = readGoogleTxtContent(); // <--- Added Text File Reader
+      var webContext = readWebsiteContent(ssmi_link);
+      var webPro = readWebsiteContent(products_link);
+
+      if (!docContext && !txtContext && !webContext && !webPro) {
+        return createJsonResponse({ error: "ບໍ່ສາມາດອ່ານຂໍ້ມູນຈາກລະບົບເອກະສານໄດ້" });
       }
 
-      // 3.2 ดึงประวัติการคุยล่าสุด เพื่อให้ AI จำบริบทต่อเนื่องได้
+      // 3.2 Fetch recent chat history
       var historyContext = getRecentHistoryText(userId);
 
-      // 3.3 กำหนดบทบาท AI
+      // 3.3 Define AI Role
       var systemPrompt = `ເຈົ້າແມ່ນ AI ຜູ້ຊ່ວຍ HR ຂອງອົງກອນ SSMI (ສິນຊັບເມືອງເໜືອ). ຕອນນີ້ເຈົ້າກຳລັງລົມກັບພະນັກງານຊື່: ${userName}.
-ໜ້າທີ່ຫຼັກຂອງເຈົ້າແມ່ນການຕອບຄຳຖາມຂອງພະນັກງານ ກ່ຽວກັບລະບຽບການ, ນະໂຍບາຍ ແລະ ສະຫວັດດີການຕ່າງໆ.
+ໜ້າທີ່ຫຼັກຂອງເຈົ້າແມ່ນການຕອບຄຳຖາມຂອງພະນັກງານ ກ່ຽວກັບລະບຽບການ, ນະໂຍບາຍ, ສະຫວັດດີການ ແລະ ໂຄງສ້າງອົງກອນ.
 ກົດລະບຽບທີ່ສຳຄັນທີ່ສຸດຂອງເຈົ້າ:
 1. ເຈົ້າຕ້ອງຕອບຄຳຖາມໂດຍອີງໃສ່ຂໍ້ມູນໃນ Context ທີ່ໃຫ້ມາເທົ່ານັ້ນ.
 2. ຖ້າຄຳຖາມໃດທີ່ບໍ່ມີຂໍ້ມູນໃນ Context, ໃຫ້ຕອບວ່າ "ຂໍອະໄພ, ຂ້ອຍບໍ່ມີຂໍ້ມູນໃນສ່ວນນີ້. ກະລຸນາຕິດຕໍ່ພະແນກ HR ເພື່ອສອບຖາມເພີ່ມເຕີມ."
 3. ຫ້າມຄິດຄຳຕອບຂຶ້ນມາເອງ (No Hallucination) ເດັດຂາດ.
 4. ຕ້ອງຕອບເປັນ "ພາສາລາວ" (Lao language) ເທົ່ານັ້ນ, ໃຫ້ໃຊ້ຄຳສັບທີ່ສຸພາບ, ເປັນທາງການແຕ່ເຂົ້າໃຈງ່າຍ.`;
 
-      // 3.4 ประกอบร่าง Prompt รวม (เอาเอกสารทั้งเล่ม + ประวัติเก่า + คำถามใหม่ ยัดรวมกัน)
-      var finalPrompt = "Context ຂໍ້ມູນລະບຽບການທັງໝົດ: \n" + docContext + "\n\n";
+      // 3.4 Assemble Final Prompt
+      var finalPrompt = "Context ຂໍ້ມູນລະບຽບການທັງໝົດ: \n" + 
+                        docContext + "\n\n" + 
+                        txtContext + "\n\n" + // Integrated TXT context
+                        webContext + "\n\n" + 
+                        webPro + "\n\n";
+
       if (historyContext !== "") {
          finalPrompt += historyContext;
       }
@@ -63,13 +79,12 @@ function doPost(e) {
           "parts": [{ "text": systemPrompt }]
         },
         "generationConfig": {
-          "temperature": 0.2, // ความแม่นยำสูง ไม่มั่ว
+          "temperature": 0.2, 
           "maxOutputTokens": 1000
         }
       };
 
-      // 3.5 ส่งไปถาม Gemini
-      var url = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent?key=" + GEMINI_API_KEY;
+      // 3.5 Send to Gemini with Key Cycling
       var options = {
         "method": "post",
         "contentType": "application/json",
@@ -77,28 +92,39 @@ function doPost(e) {
         "muteHttpExceptions": true
       };
 
-      var response = UrlFetchApp.fetch(url, options);
-      var responseData = JSON.parse(response.getContentText());
+      var aiReply = null;
+      var lastError = "";
 
-      // 3.6 ส่งคำตอบกลับและบันทึก
-      if (responseData.candidates && responseData.candidates.length > 0) {
-        var aiReply = responseData.candidates[0].content.parts[0].text;
+      for (var i = 0; i < GEMINI_API_KEYS.length; i++) {
+        var url = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent?key=" + GEMINI_API_KEYS[i];
+        var response = UrlFetchApp.fetch(url, options);
+        var responseData = JSON.parse(response.getContentText());
+
+        if (responseData.candidates && responseData.candidates.length > 0) {
+          aiReply = responseData.candidates[0].content.parts[0].text;
+          break; 
+        } else {
+          lastError = JSON.stringify(responseData);
+          console.log("Key " + (i+1) + " failed/quota reached.");
+        }
+      }
+
+      // 3.6 Log and Return
+      if (aiReply) {
         logToSheet(userId, userName, userMessage, aiReply, "Success"); 
         return createJsonResponse({ reply: aiReply });
       } else {
-        var errorMsg = "API Error: " + JSON.stringify(responseData);
-        logToSheet(userId, userName, userMessage, errorMsg, "Error");
-        return createJsonResponse({ error: "AI ບໍ່ສາມາດສ້າງຄຳຕອບໄດ້ໃນຕອນນີ້. (ອາດຈະຕິດ Quota 15 ຄັ້ງ/ນາທີ, ກະລຸນາລໍຖ້າຈັກໜ້ອຍ)" });
+        logToSheet(userId, userName, userMessage, lastError, "Error");
+        return createJsonResponse({ error: "AI ບໍ່ສາມາດສ້າງຄຳຕອບໄດ້ໃນຕອນນີ້. ກະລຸນາລໍຖ້າຈັກໜ້ອຍ" });
       }
     }
-
   } catch (err) {
     return createJsonResponse({ error: "ເກີດຂໍ້ຜິດພາດ: " + err.toString() });
   }
 }
 
 // ==========================================
-// 2. ฟังก์ชันตรวจสอบการ Login
+// 2. Login Check
 // ==========================================
 function handleLogin(username, password) {
   try {
@@ -118,7 +144,7 @@ function handleLogin(username, password) {
 }
 
 // ==========================================
-// 3. ฟังก์ชันบันทึกประวัติลง Sheets
+// 3. Log History to Sheets
 // ==========================================
 function logToSheet(userId, userName, question, answer, status) {
   try {
@@ -130,13 +156,12 @@ function logToSheet(userId, userName, question, answer, status) {
 }
 
 // ==========================================
-// 4. ฟังก์ชันอ่านเอกสาร Google Docs (แบบมี Cache V3)
+// 4. Read Google Docs (With Cache)
 // ==========================================
 function readGoogleDocContent() {
   var cache = CacheService.getScriptCache();
-  var cacheKey = "HR_DOC_V3"; // อัปเดต Cache เป็น V3 เพื่อล้างความจำผิดๆ ทิ้งไป
+  var cacheKey = "HR_DOC_V3"; 
   var cachedDoc = cache.get(cacheKey);
-
   if (cachedDoc) return cachedDoc; 
 
   try {
@@ -158,22 +183,54 @@ function readGoogleDocContent() {
       }
     }
     extractTextFromTabs(allTabs); 
-    
-    // พยายามเก็บลง Cache (เก็บได้สูงสุด 100KB)
-    try {
-      cache.put(cacheKey, fullText, 21600); // เก็บไว้ 6 ชั่วโมง
-    } catch(e) {
-      // ถ้าเอกสารใหญ่กว่า 100KB มันจะข้ามการจำไปอ่านสดแทน ไม่เป็นไรครับ
-    }
-    
+    cache.put(cacheKey, fullText, 21600); 
     return fullText;
-  } catch (e) {
-    return null;
-  }
+  } catch (e) { return ""; }
 }
 
 // ==========================================
-// 5. ฟังก์ชันดึงประวัติไปโชว์ในเว็บ
+// 5. Read Text File from Drive (New)
+// ==========================================
+function readGoogleTxtContent() {
+  var cache = CacheService.getScriptCache();
+  var cacheKey = "HR_TXT_V1"; 
+  var cachedTxt = cache.get(cacheKey);
+  if (cachedTxt) return cachedTxt; 
+
+  try {
+    var file = DriveApp.getFileById(GOOGLE_TXT_ID);
+    var txtContent = file.getBlob().getDataAsString();
+    var finalTxtContext = "--- [ຂໍ້ມູນເພີ່ມເຕີມຈາກ TXT File] ---\n" + txtContent;
+    cache.put(cacheKey, finalTxtContext, 21600); 
+    return finalTxtContext;
+  } catch (e) { return ""; }
+}
+
+// ==========================================
+// 6. Read Website (Clean HTML)
+// ==========================================
+function readWebsiteContent(url) {
+  var cache = CacheService.getScriptCache();
+  var cacheKey = "HR_WEB_" + Utilities.base64Encode(url).substring(0, 50);
+  var cachedWeb = cache.get(cacheKey);
+  if (cachedWeb) return cachedWeb;
+
+  try {
+    var response = UrlFetchApp.fetch(url);
+    var htmlContent = response.getContentText();
+    var textOnly = htmlContent.replace(/<script[^>]*>([\S\s]*?)<\/script>/gmi, '');
+    textOnly = textOnly.replace(/<style[^>]*>([\S\s]*?)<\/style>/gmi, '');
+    textOnly = textOnly.replace(/<\/?[^>]+(>|$)/g, " ");
+    textOnly = textOnly.replace(/\s+/g, ' ').trim();
+
+    var finalWebContext = "--- [ຂໍ້ມູນຈາກ Website: " + url + "] ---\n" + textOnly;
+    cache.put(cacheKey, finalWebContext, 21600);
+    return finalWebContext;
+  } catch (e) { return "--- [ບໍ່ສາມາດດຶງຂໍ້ມູນຈາກ Website ໄດ້] ---"; }
+}
+
+// ==========================================
+// 7. Utility Functions (History & JSON)
 // ==========================================
 function getChatHistory(userId) {
   try {
@@ -186,14 +243,9 @@ function getChatHistory(userId) {
       }
     }
     return createJsonResponse({ history: history });
-  } catch (e) {
-    return createJsonResponse({ history: [] });
-  }
+  } catch (e) { return createJsonResponse({ history: [] }); }
 }
 
-// ==========================================
-// 6. ฟังก์ชันดึงประวัติเป็นความจำ AI
-// ==========================================
 function getRecentHistoryText(userId) {
   try {
     var sheet = SpreadsheetApp.openById(GOOGLE_SHEET_ID).getSheetByName(LOG_SHEET_NAME);
@@ -209,14 +261,8 @@ function getRecentHistoryText(userId) {
         if (tempHistory.length >= 4) break; 
       }
     }
-
-    if (tempHistory.length > 0) {
-      return "--- ປະຫວັດການສົນທະນາຫຼ້າສຸດ ---\n" + tempHistory.join("\n\n") + "\n-----------------------\n\n";
-    }
-    return "";
-  } catch (e) {
-    return "";
-  }
+    return tempHistory.length > 0 ? "--- ປະຫວັດການສົນທະນາຫຼ້າສຸດ ---\n" + tempHistory.join("\n\n") + "\n\n" : "";
+  } catch (e) { return ""; }
 }
 
 function createJsonResponse(dataObject) {

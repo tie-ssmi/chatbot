@@ -141,32 +141,40 @@ function speakText(text) {
     if (!autoSpeakToggle.checked) return;
     window.speechSynthesis.cancel(); // หยุดเสียงเก่าก่อน
 
-    // ลบสัญลักษณ์พิเศษออกเพื่อให้ AI อ่านลื่นขึ้น
+    // 1. ลบสัญลักษณ์พิเศษออก
     const cleanText = text.replace(/[\*\#\_]/g, "");
-    const utterance = new SpeechSynthesisUtterance(cleanText);
+    
+    // 2. 🌟 ทริคพระเอก: แปลงอักษรลาว -> ไทย (เพื่อหลอกให้ AI ไทยอ่านออก)
+    let speechText = "";
+    for (let i = 0; i < cleanText.length; i++) {
+        let code = cleanText.charCodeAt(i);
+        // เช็คว่าถ้าเป็นตัวอักษรลาว (รหัส Unicode 0x0E80 ถึง 0x0EFF หรือ 3712 ถึง 3839)
+        if (code >= 3712 && code <= 3839) {
+            // ลบค่าด้วย 128 มันจะกลายเป็นตัวอักษรไทยตัวนั้นเป๊ะๆ (เช่น ກ -> ก)
+            speechText += String.fromCharCode(code - 128); 
+        } else {
+            speechText += cleanText[i]; // ตัวเลขอังกฤษปล่อยผ่าน
+        }
+    }
+
+    // 3. ส่งข้อความที่แปลงร่างแล้วไปให้ AI อ่าน
+    const utterance = new SpeechSynthesisUtterance(speechText);
     
     // ดึงรายชื่อเสียงทั้งหมดที่มีในเครื่อง
     const voices = window.speechSynthesis.getVoices();
     
-    // 1. พยายามหาเสียงภาษาลาว (lo-LA)
-    let selectedVoice = voices.find(v => v.lang.includes('lo') || v.lang.includes('LO'));
-    
-    // 2. ถ้าเครื่องไม่มีเสียงลาว (ซึ่งส่วนใหญ่ไม่มี) ให้หาเสียงภาษาไทย (th-TH) แทน
-    if (!selectedVoice) {
-        // หาเสียงภาษาไทย เช่น Google ภาษาไทย หรือ Microsoft Niwatt
-        selectedVoice = voices.find(v => v.lang.includes('th') || v.lang.includes('TH'));
-    }
+    // บังคับหาเสียงภาษาไทย (เพราะเราแปลง Text เป็นไทยแล้ว)
+    let selectedVoice = voices.find(v => v.lang.includes('th') || v.lang.includes('TH'));
 
     if (selectedVoice) {
         utterance.voice = selectedVoice;
         utterance.lang = selectedVoice.lang;
-        console.log("เลือกใช้เสียง: " + selectedVoice.name);
     } else {
-        // ถ้าหาไม่ได้จริงๆ ให้ตั้งค่ากลางไว้
         utterance.lang = 'th-TH'; 
     }
 
-    utterance.rate = 0.9; // ลดความเร็วลงนิดนึงเพื่อให้ฟังภาษาลาวจากเสียงไทยได้ชัดขึ้น
+    // ปรับความเร็วให้ช้าลงนิดนึง (0.85) จะทำให้สำเนียงฟังดูใกล้เคียงคนลาวพูดมากขึ้น
+    utterance.rate = 0.85; 
     utterance.pitch = 1.0; 
     
     window.speechSynthesis.speak(utterance);
