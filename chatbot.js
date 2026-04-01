@@ -128,6 +128,8 @@ async function sendMessage() {
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition;
 let isRecording = false;
+let availableVoices = [];
+let hasWarnedNoLaoVoice = false;
 
 if (SpeechRecognition) {
     recognition = new SpeechRecognition();
@@ -142,6 +144,22 @@ function toggleMic() {
     isRecording ? recognition.stop() : recognition.start();
 }
 
+function refreshVoices() {
+    if (!('speechSynthesis' in window)) return;
+    availableVoices = window.speechSynthesis.getVoices() || [];
+}
+
+function pickBestVoice() {
+    const voices = availableVoices.length ? availableVoices : (window.speechSynthesis.getVoices() || []);
+    if (!voices.length) return null;
+
+    const exactLao = voices.find(v => (v.lang || '').toLowerCase() === 'lo-la');
+    if (exactLao) return exactLao;
+
+    const laoFamily = voices.find(v => (v.lang || '').toLowerCase().startsWith('lo'));
+    return laoFamily || null;
+}
+
 function speakText(text) {
     if (!('speechSynthesis' in window)) return;
     if (!autoSpeakToggle.checked) return;
@@ -150,30 +168,21 @@ function speakText(text) {
     // ลบสัญลักษณ์พิเศษออกเพื่อให้ AI อ่านลื่นขึ้น
     const cleanText = text.replace(/[\*\#\_]/g, "");
     const utterance = new SpeechSynthesisUtterance(cleanText);
-    
-    // ดึงรายชื่อเสียงทั้งหมดที่มีในเครื่อง
-    let voices = window.speechSynthesis.getVoices();
-    if (!voices || voices.length === 0) {
-        window.speechSynthesis.getVoices();
-        voices = window.speechSynthesis.getVoices();
-    }
-    
-    // 1. พยายามหาเสียงภาษาลาว (lo-LA)
-    let selectedVoice = voices.find(v => (v.lang || '').toLowerCase().includes('lo'));
-    
-    // 2. ถ้าเครื่องไม่มีเสียงลาว (ซึ่งส่วนใหญ่ไม่มี) ให้หาเสียงภาษาไทย (th-TH) แทน
-    if (!selectedVoice) {
-        // หาเสียงภาษาไทย เช่น Google ภาษาไทย หรือ Microsoft Niwatt
-        selectedVoice = voices.find(v => (v.lang || '').toLowerCase().includes('th'));
-    }
+
+    refreshVoices();
+    const selectedVoice = pickBestVoice();
 
     if (selectedVoice) {
         utterance.voice = selectedVoice;
         utterance.lang = selectedVoice.lang;
         console.log("เลือกใช้เสียง: " + selectedVoice.name);
     } else {
-        // ถ้าหาไม่ได้จริงๆ ให้ตั้งค่ากลางไว้
-        utterance.lang = 'th-TH'; 
+        // Lao-only mode: do not fallback to Thai/English voice
+        if (!hasWarnedNoLaoVoice) {
+            hasWarnedNoLaoVoice = true;
+            console.warn('No Lao voice (lo-LA) installed in this browser. Lao-only speech is disabled until a Lao voice is installed.');
+        }
+        return;
     }
 
     utterance.rate = 0.9; // ลดความเร็วลงนิดนึงเพื่อให้ฟังภาษาลาวจากเสียงไทยได้ชัดขึ้น
@@ -194,8 +203,9 @@ function appendMessage(text, className, id = null, isHtml = false) {
 }
 
 if ('speechSynthesis' in window) {
+    refreshVoices();
     window.speechSynthesis.addEventListener('voiceschanged', () => {
-        window.speechSynthesis.getVoices();
+        refreshVoices();
     });
 }
 function removeMessage(id) { const el = document.getElementById(id); if (el) el.remove(); }
