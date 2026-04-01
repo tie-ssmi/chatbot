@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSMI HR Assistant</title>
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <script>
+        if (!localStorage.getItem('ssmi_user_id')) {
+            window.location.href = 'login.html'; // ຖ້າບໍ່ມີລະຫັດ ໃຫ້ເຕະກັບໄປໜ້າ Login
+        }
+    </script>
+
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="header-left">
+                <div class="status-dot"></div>
+                <span id="bot-title">SSMI HR Assistant</span>
+            </div>
+            
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <label class="voice-toggle"><input type="checkbox" id="auto-speak" checked> 🔊 ເປີດສຽງ</label>
+                <button onclick="logout()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 10px; border-radius: 15px; cursor: pointer; font-size: 0.8em;">ອອກຈາກລະບົບ</button>
+            </div>
+        </div>
+        
+
+
+        <div class="chat-messages" id="chat-messages">
+            <div class="message bot-message">
+                ສະບາຍດີ! ຂ້ອຍແມ່ນ AI ຜູ້ຊ່ວຍ HR ຂອງ SSMI (ສິນຊັບເມືອງເໜືອ).<br><br>
+                ທ່ານສາມາດພິມຄຳຖາມ ຫຼື <b>ກົດປຸ່ມໄມໂຄຣໂຟນ</b> ເພື່ອເວົ້າຖາມຂ້ອຍໄດ້ເລີຍ!
+            </div>
+        </div>
+
+        <div class="chat-input-area">
+            <button id="mic-btn" class="action-btn" onclick="toggleMic()" title="ກົດເພື່ອເວົ້າ">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+            </button>
+            
+            <input type="text" id="user-input" placeholder="ພິມ ຫຼື ເວົ້າຄຳຖາມ..." onkeypress="handleEnter(event)">
+            
+            <button id="send-btn" class="action-btn" onclick="sendMessage()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    
+    <script src="chatbot.js"></script>
+
+    <script>
+        // เปลี่ยนชื่อบน Header ตาม config
+        document.getElementById('bot-title').innerText = CHATBOT_CONFIG.BOT_NAME;
+    </script>
+</body>
+</html>
