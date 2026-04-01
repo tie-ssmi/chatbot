@@ -35,19 +35,20 @@ function doPost(e) {
       var userMessage = requestData.message;
       var userId = requestData.userId || "Unknown";
       var userName = requestData.userName || "ພະນັກງານ";
+      var clientHistory = normalizeClientHistory(requestData.history);
 
-      // 3.1 Fetch Context from all sources
-      var docContext = readGoogleDocContent();
-      var txtContext = readGoogleTxtContent(); // <--- Added Text File Reader
-      var webContext = readWebsiteContent(ssmi_link);
-      var webPro = readWebsiteContent(products_link);
+      // 3.1 Fetch shared context (single cached block, lock-protected rebuild)
+      var knowledgeContext = getKnowledgeContext();
 
-      if (!docContext && !txtContext && !webContext && !webPro) {
+      if (!knowledgeContext) {
         return createJsonResponse({ error: "ບໍ່ສາມາດອ່ານຂໍ້ມູນຈາກລະບົບເອກະສານໄດ້" });
       }
 
-      // 3.2 Fetch recent chat history
-      var historyContext = getRecentHistoryText(userId);
+      // 3.2 Prefer lightweight client-side history, fallback to sheet history
+      var historyContext = buildHistoryTextFromClient(clientHistory);
+      if (!historyContext) {
+        historyContext = getRecentHistoryText(userId);
+      }
 
       // 3.3 Define AI Role
       var systemPrompt = `ເຈົ້າແມ່ນ AI ຜູ້ຊ່ວຍ HR ຂອງອົງກອນ SSMI (ສິນຊັບເມືອງເໜືອ). ຕອນນີ້ເຈົ້າກຳລັງລົມກັບພະນັກງານຊື່: ${userName}.
@@ -59,11 +60,7 @@ function doPost(e) {
 4. ຕ້ອງຕອບເປັນ "ພາສາລາວ" (Lao language) ເທົ່ານັ້ນ, ໃຫ້ໃຊ້ຄຳສັບທີ່ສຸພາບ, ເປັນທາງການແຕ່ເຂົ້າໃຈງ່າຍ.`;
 
       // 3.4 Assemble Final Prompt
-      var finalPrompt = "Context ຂໍ້ມູນລະບຽບການທັງໝົດ: \n" + 
-                        docContext + "\n\n" + 
-                        txtContext + "\n\n" + // Integrated TXT context
-                        webContext + "\n\n" + 
-                        webPro + "\n\n";
+      var finalPrompt = "Context ຂໍ້ມູນລະບຽບການທັງໝົດ: \n" + knowledgeContext + "\n\n";
 
       if (historyContext !== "") {
          finalPrompt += historyContext;
@@ -235,7 +232,8 @@ function readWebsiteContent(url) {
 function getChatHistory(userId) {
   try {
     var sheet = SpreadsheetApp.openById(GOOGLE_SHEET_ID).getSheetByName(LOG_SHEET_NAME);
-    var data = sheet.getDataRange().getValues();
+    if (!sheet) return createJsonResponse({ history: [] });
+    var data = getRecentLogRows(sheet, 1200, 5);
     var history = [];
     for (var i = data.length - 1; i >= 1 && history.length < 15; i--) {
       if (data[i][1].toString() === userId) {
@@ -250,7 +248,7 @@ function getRecentHistoryText(userId) {
   try {
     var sheet = SpreadsheetApp.openById(GOOGLE_SHEET_ID).getSheetByName(LOG_SHEET_NAME);
     if(!sheet) return "";
-    var data = sheet.getDataRange().getValues();
+    var data = getRecentLogRows(sheet, 800, 5);
     var tempHistory = [];
 
     for (var i = data.length - 1; i >= 1; i--) {
@@ -267,4 +265,78 @@ function getRecentHistoryText(userId) {
 
 function createJsonResponse(dataObject) {
   return ContentService.createTextOutput(JSON.stringify(dataObject)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function getKnowledgeContext() {
+  var cache = CacheService.getScriptCache();
+  var cacheKey = "HR_KNOWLEDGE_V1";
+  var cached = cache.get(cacheKey);
+  if (cached) return cached;
+
+  var lock = LockService.getScriptLock();
+  var acquired = false;
+  try {
+    acquired = lock.tryLock(5000);
+    if (acquired) {
+      cached = cache.get(cacheKey);
+      if (cached) return cached;
+
+      var docContext = readGoogleDocContent();
+      var txtContext = readGoogleTxtContent();
+      var webContext = readWebsiteContent(ssmi_link);
+      var webPro = readWebsiteContent(products_link);
+      var combined = docContext + "\n\n" + txtContext + "\n\n" + webContext + "\n\n" + webPro;
+      if (combined.replace(/\s+/g, "").length > 0) {
+        cache.put(cacheKey, combined, 21600);
+      }
+      return combined;
+    }
+  } catch (e) {}
+  finally {
+    if (acquired) {
+      try { lock.releaseLock(); } catch (err) {}
+    }
+  }
+
+  // If lock was not acquired, return available partial contexts quickly.
+  var fallback = readGoogleDocContent() + "\n\n" + readGoogleTxtContent() + "\n\n" + readWebsiteContent(ssmi_link) + "\n\n" + readWebsiteContent(products_link);
+  return fallback;
+}
+
+function normalizeClientHistory(history) {
+  if (!history || !Array.isArray(history)) return [];
+  var clean = [];
+  for (var i = 0; i < history.length; i++) {
+    var item = history[i];
+    if (!item) continue;
+    var role = item.role || "";
+    var message = item.message || "";
+    if (typeof role !== "string" || typeof message !== "string") continue;
+    role = role.toLowerCase();
+    if ((role === "user" || role === "assistant") && message.trim() !== "") {
+      clean.push({ role: role, message: message.trim() });
+    }
+  }
+  if (clean.length > 12) {
+    clean = clean.slice(clean.length - 12);
+  }
+  return clean;
+}
+
+function buildHistoryTextFromClient(history) {
+  if (!history || history.length === 0) return "";
+  var lines = [];
+  for (var i = 0; i < history.length; i++) {
+    var speaker = history[i].role === "assistant" ? "AI" : "ພະນັກງານ";
+    lines.push(speaker + ": " + history[i].message);
+  }
+  return "--- ປະຫວັດການສົນທະນາຫຼ້າສຸດ ---\n" + lines.join("\n") + "\n\n";
+}
+
+function getRecentLogRows(sheet, maxRows, columnCount) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [["", "", "", "", ""]];
+  var startRow = Math.max(2, lastRow - maxRows + 1);
+  var numRows = lastRow - startRow + 1;
+  return sheet.getRange(startRow, 1, numRows, columnCount).getValues();
 }
