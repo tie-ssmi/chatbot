@@ -101,6 +101,11 @@ async function sendMessage() {
         if (data.reply) {
             const formattedReply = data.reply.replace(/\n/g, '<br>');
             appendMessage(formattedReply, 'bot-message', null, true);
+            currentChatHistory.push({ role: 'user', message: text });
+            currentChatHistory.push({ role: 'assistant', message: data.reply });
+            if (currentChatHistory.length > 20) {
+                currentChatHistory = currentChatHistory.slice(-20);
+            }
             speakText(data.reply); 
             
         } else if (data.error) {    
@@ -138,6 +143,7 @@ function toggleMic() {
 }
 
 function speakText(text) {
+    if (!('speechSynthesis' in window)) return;
     if (!autoSpeakToggle.checked) return;
     window.speechSynthesis.cancel(); // หยุดเสียงเก่าก่อน
 
@@ -146,15 +152,19 @@ function speakText(text) {
     const utterance = new SpeechSynthesisUtterance(cleanText);
     
     // ดึงรายชื่อเสียงทั้งหมดที่มีในเครื่อง
-    const voices = window.speechSynthesis.getVoices();
+    let voices = window.speechSynthesis.getVoices();
+    if (!voices || voices.length === 0) {
+        window.speechSynthesis.getVoices();
+        voices = window.speechSynthesis.getVoices();
+    }
     
     // 1. พยายามหาเสียงภาษาลาว (lo-LA)
-    let selectedVoice = voices.find(v => v.lang.includes('lo') || v.lang.includes('LO'));
+    let selectedVoice = voices.find(v => (v.lang || '').toLowerCase().includes('lo'));
     
     // 2. ถ้าเครื่องไม่มีเสียงลาว (ซึ่งส่วนใหญ่ไม่มี) ให้หาเสียงภาษาไทย (th-TH) แทน
     if (!selectedVoice) {
         // หาเสียงภาษาไทย เช่น Google ภาษาไทย หรือ Microsoft Niwatt
-        selectedVoice = voices.find(v => v.lang.includes('th') || v.lang.includes('TH'));
+        selectedVoice = voices.find(v => (v.lang || '').toLowerCase().includes('th'));
     }
 
     if (selectedVoice) {
@@ -183,6 +193,10 @@ function appendMessage(text, className, id = null, isHtml = false) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
+if ('speechSynthesis' in window) {
+    window.speechSynthesis.addEventListener('voiceschanged', () => {
+        window.speechSynthesis.getVoices();
+    });
+}
 function removeMessage(id) { const el = document.getElementById(id); if (el) el.remove(); }
 function toggleInput(enable) { userInput.disabled = !enable; sendBtn.disabled = !enable; if(enable) userInput.focus(); }
