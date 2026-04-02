@@ -138,6 +138,9 @@ let isRecording = false;
 if (SpeechRecognition) {
     recognition = new SpeechRecognition();
     recognition.lang = CHATBOT_CONFIG.LANGUAGE;
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
     
     recognition.onstart = () => { 
         isRecording = true; 
@@ -179,6 +182,7 @@ async function toggleMic() {
     try {
         // บังคับปลุกไมโครโฟน เพื่อเช็คสิทธิ์ (ถ้ายังไม่เคยอนุญาต มันจะเด้งถามตรงนี้เลย)
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop());
         
         // ถ้าอนุญาตแล้ว ก็เริ่มฟังเสียงเลย
         recognition.start();
