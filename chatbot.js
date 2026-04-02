@@ -190,11 +190,6 @@ async function toggleMic() {
     }
 }
 
-function toggleMic() {
-    if (!recognition) return alert("Browser ບໍ່ຮອງຮັບ");
-    isRecording ? recognition.stop() : recognition.start();
-}
-
 function refreshVoices() {
     if (!('speechSynthesis' in window)) return;
     availableVoices = window.speechSynthesis.getVoices() || [];
