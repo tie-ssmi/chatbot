@@ -58,8 +58,10 @@ async function loadChatHistory() {
             data.history.forEach(item => {
                 appendMessage(item.question, 'user-message');
                 if (!item.answer.includes("API Error")) {
-                    appendMessage(item.answer, 'bot-message', null, true);
-                } else {
+                    // 🌟 เพิ่มการแปลง \n เป็น <br> และแปลง **ข้อความ** เป็นตัวหนา
+                    let formattedAnswer = item.answer.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+                    appendMessage(formattedAnswer, 'bot-message', null, true);
+                }  else {
                     appendMessage("⚠️ ຂໍອະໄພ, ຂໍ້ຄວາມນີ້ເກີດຂໍ້ຜິດພາດ", 'bot-message');
                 }
             });
@@ -103,7 +105,7 @@ async function sendMessage() {
         removeMessage(loadingId);
 
         if (data.reply) {
-            const formattedReply = data.reply.replace(/\n/g, '<br>');
+            const formattedReply = data.reply.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
             appendMessage(formattedReply, 'bot-message', null, true);
             currentChatHistory.push({ role: 'user', message: text });
             currentChatHistory.push({ role: 'assistant', message: data.reply });
@@ -132,15 +134,60 @@ async function sendMessage() {
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition;
 let isRecording = false;
-let availableVoices = [];
-let hasWarnedNoLaoVoice = false;
 
 if (SpeechRecognition) {
     recognition = new SpeechRecognition();
     recognition.lang = CHATBOT_CONFIG.LANGUAGE;
-    recognition.onstart = () => { isRecording = true; micBtn.classList.add('recording'); };
-    recognition.onresult = (event) => { userInput.value = event.results[0][0].transcript; sendMessage(); };
-    recognition.onend = () => { isRecording = false; micBtn.classList.remove('recording'); };
+    
+    recognition.onstart = () => { 
+        isRecording = true; 
+        micBtn.classList.add('recording'); 
+    };
+    
+    recognition.onresult = (event) => { 
+        userInput.value = event.results[0][0].transcript; 
+        sendMessage(); 
+    };
+    
+    recognition.onend = () => { 
+        isRecording = false; 
+        micBtn.classList.remove('recording'); 
+    };
+
+    // 🌟 เพิ่มการดักจับ Error กรณีไมค์มีปัญหา หรือโดนบล็อก
+    recognition.onerror = (event) => {
+        console.error("Speech recognition error:", event.error);
+        if (event.error === 'not-allowed') {
+            alert("⚠️ ລະບົບຖືກບລັອກໄມໂຄຣໂຟນ! \nກະລຸນາກົດປຸ່ມຮູບແມ່ກະແຈ (Padlock) ຢູ່ແຖບ URL ດ້ານເທິງ, ແລ້ວເລືອກອະນຸຍາດ (Allow) ໃຫ້ໄມໂຄຣໂຟນ.");
+        }
+        isRecording = false;
+        micBtn.classList.remove('recording');
+    };
+}
+
+// 🌟 อัปเกรดฟังก์ชันปุ่มไมค์ ให้บังคับขออนุญาตทุกครั้ง
+async function toggleMic() {
+    if (!recognition) {
+        return alert("⚠️ Browser ຂອງທ່ານບໍ່ຮອງຮັບລະບົບສັ່ງງານດ້ວຍສຽງ (ແນະນຳໃຫ້ໃຊ້ Google Chrome).");
+    }
+
+    if (isRecording) {
+        recognition.stop();
+        return;
+    }
+
+    try {
+        // บังคับปลุกไมโครโฟน เพื่อเช็คสิทธิ์ (ถ้ายังไม่เคยอนุญาต มันจะเด้งถามตรงนี้เลย)
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        
+        // ถ้าอนุญาตแล้ว ก็เริ่มฟังเสียงเลย
+        recognition.start();
+        
+    } catch (err) {
+        // ถ้าเข้าเงื่อนไขนี้ แปลว่าพนักงานกด "Block" หรือคอมพิวเตอร์ไม่มีไมค์
+        console.error("Microphone access denied:", err);
+        alert("⚠️ ບໍ່ສາມາດເປີດໄມໂຄຣໂຟນໄດ້! \nກະລຸນາກວດສອບວ່າທ່ານໄດ້ກົດອະນຸຍາດ (Allow) ແລ້ວຫຼືຍັງ.");
+    }
 }
 
 function toggleMic() {
