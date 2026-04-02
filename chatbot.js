@@ -132,6 +132,16 @@ async function sendMessage() {
 // ==========================================
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const supportedRecorderMimeType = (() => {
+    if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return '';
+    if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) return 'audio/webm;codecs=opus';
+    if (MediaRecorder.isTypeSupported('audio/webm')) return 'audio/webm';
+    if (MediaRecorder.isTypeSupported('audio/mp4')) return 'audio/mp4';
+    if (MediaRecorder.isTypeSupported('audio/aac')) return 'audio/aac';
+    return '';
+})();
+const recorderFileExtension = supportedRecorderMimeType.includes('mp4') ? 'mp4' : supportedRecorderMimeType.includes('aac') ? 'aac' : 'webm';
 let recognition;
 let isRecording = false;
 let mediaRecorder = null;
@@ -221,7 +231,9 @@ async function toggleMic() {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         // start MediaRecorder
         recordedChunks = [];
-        mediaRecorder = new MediaRecorder(stream);
+        const recorderOptions = supportedRecorderMimeType ? { mimeType: supportedRecorderMimeType } : {};
+        mediaRecorder = new MediaRecorder(stream, recorderOptions);
+        console.log('MediaRecorder mimeType:', supportedRecorderMimeType);
 
         mediaRecorder.ondataavailable = (e) => {
             if (e.data && e.data.size > 0) recordedChunks.push(e.data);
@@ -238,11 +250,13 @@ async function toggleMic() {
             // stop local tracks
             stream.getTracks().forEach(t => t.stop());
             // upload blob to server for transcription
-            const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+            const blobType = recordedChunks.length ? recordedChunks[0].type : supportedRecorderMimeType || 'audio/webm';
+            const fileExtension = blobType.includes('mp4') ? 'mp4' : blobType.includes('aac') ? 'aac' : blobType.includes('webm') ? 'webm' : recorderFileExtension;
+            const blob = new Blob(recordedChunks, { type: blobType });
             try {
                 const form = new FormData();
                 form.append('action', 'transcribeAudio');
-                form.append('file', blob, 'recording.webm');
+                form.append('file', blob, `recording.${fileExtension}`);
                 const resp = await fetch(CHATBOT_CONFIG.API_URL, {
                     method: 'POST',
                     body: form
