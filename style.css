@@ -15,7 +15,7 @@
 }
 
 body { 
-    font-family: 'Noto Sans Lao', sans-serif;
+    font-family: 'Sora', 'Noto Sans Lao', sans-serif;
     color: var(--text-color);
     background: radial-gradient(circle at 10% 10%, #dff1f8 0%, transparent 38%),
                 radial-gradient(circle at 90% 90%, #d9efe6 0%, transparent 42%),
@@ -53,10 +53,13 @@ body {
 
 .header-left { display: flex; align-items: center; }
 .header-text { display: flex; flex-direction: column; }
-#bot-title { font-family: 'Sora', sans-serif; font-size: 1rem; font-weight: 600; letter-spacing: 0.2px; }
+#bot-title { font-family: 'Noto Sans Lao', sans-serif; font-size: 1rem; font-weight: 600; letter-spacing: 0.2px; }
 .header-text small { color: rgba(255, 255, 255, 0.85); font-size: 0.75rem; }
+.bot-logo { width: 44px; height: 44px; object-fit: contain; border-radius: 12px; margin-right: 12px; }
 .status-dot { width: 11px; height: 11px; background-color: #69e39a; border-radius: 50%; margin-right: 10px; box-shadow: 0 0 0 4px rgba(105, 227, 154, 0.2); }
-
+.p .span     {  font-family: 'Noto Sans Lao', sans-serif; font-size: 1rem; font-weight: 600; letter-spacing: 0.2px; }
+#chat-input {  font-family: 'Noto Sans Lao', sans-serif; font-size: 1rem; font-weight: 600; letter-spacing: 0.2px; }
+.header-actions { display: flex; gap: 8px; align-items: center; }
 .header-actions { display: flex; gap: 8px; align-items: center; }
 .voice-toggle { font-size: 0.82rem; display: flex; align-items: center; gap: 5px; cursor: pointer; background: rgba(255,255,255,0.2); padding: 6px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.18); }
 .voice-toggle input { cursor: pointer; }
@@ -120,6 +123,7 @@ body {
     border: 1px solid #c8dae2;
     border-radius: 14px;
     outline: none;
+    font-family: 'Noto Sans Lao', sans-serif;
     font-size: 0.96rem;
     color: var(--text-color);
     background: #fdfefe;
