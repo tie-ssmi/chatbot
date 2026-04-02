@@ -148,8 +148,21 @@ if (SpeechRecognition) {
     };
     
     recognition.onresult = (event) => { 
-        userInput.value = event.results[0][0].transcript; 
+        const transcript = event.results[0][0].transcript;
+        console.log('Speech recognition result:', transcript);
+        userInput.value = transcript; 
         sendMessage(); 
+    };
+
+    recognition.onnomatch = () => {
+        console.warn('Speech recognition did not match any text.');
+        alert('⚠️ ບໍ່ພົບເຄື່ອງມື ຫຼື ບໍ່ສາມາດແປງສຽງເປັນຂໍ້ຄວາມໄດ້');
+    };
+
+    recognition.onspeechend = () => {
+        if (isRecording) {
+            recognition.stop();
+        }
     };
     
     recognition.onend = () => { 
