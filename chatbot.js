@@ -130,18 +130,24 @@ async function sendMessage() {
 // ==========================================
 // 3. ระบบเสียง & UI Helpers
 // ==========================================
+// ==========================================
+// 3. ระบบเสียง & UI Helpers
+// ==========================================
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+// 🌟 แก้ไขลำดับ MimeType ให้รองรับ iOS Safari (mp4) เป็นอันดับแรกสุด
 const supportedRecorderMimeType = (() => {
     if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return '';
+    if (MediaRecorder.isTypeSupported('audio/mp4')) return 'audio/mp4'; // iOS ມັກໂຕນີ້
     if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) return 'audio/webm;codecs=opus';
     if (MediaRecorder.isTypeSupported('audio/webm')) return 'audio/webm';
-    if (MediaRecorder.isTypeSupported('audio/mp4')) return 'audio/mp4';
     if (MediaRecorder.isTypeSupported('audio/aac')) return 'audio/aac';
     return '';
 })();
 const recorderFileExtension = supportedRecorderMimeType.includes('mp4') ? 'mp4' : supportedRecorderMimeType.includes('aac') ? 'aac' : 'webm';
+
 let recognition;
 let isRecording = false;
 let mediaRecorder = null;
@@ -168,14 +174,11 @@ if (SpeechRecognition) {
     };
 
     recognition.onnomatch = () => {
-        console.warn('Speech recognition did not match any text.');
         alert('⚠️ ບໍ່ພົບເຄື່ອງມື ຫຼື ບໍ່ສາມາດແປງສຽງເປັນຂໍ້ຄວາມໄດ້');
     };
 
     recognition.onspeechend = () => {
-        if (isRecording) {
-            recognition.stop();
-        }
+        if (isRecording) recognition.stop();
     };
     
     recognition.onend = () => { 
@@ -183,26 +186,25 @@ if (SpeechRecognition) {
         micBtn.classList.remove('recording'); 
     };
 
-    // 🌟 เพิ่มการดักจับ Error กรณีไมค์มีปัญหา หรือโดนบล็อก
     recognition.onerror = (event) => {
         console.error("Speech recognition error:", event.error);
         if (event.error === 'not-allowed') {
-            alert("⚠️ ລະບົບຖືກບລັອກໄມໂຄຣໂຟນ! \nກະລຸນາກົດປຸ່ມຮູບແມ່ກະແຈ (Padlock) ຢູ່ແຖບ URL ດ້ານເທິງ, ແລ້ວເລືອກອະນຸຍາດ (Allow) ໃຫ້ໄມໂຄຣໂຟນ.");
+            // แจ้งเตือนเวลาโดน Block
+            alert("⚠️ ລະບົບຖືກບລັອກໄມໂຄຣໂຟນ! \n(ສຳລັບ iPhone ໃຫ້ກົດປຸ່ມ 'aA' ຫຼື ຮູບແມ່ກະແຈ ຢູ່ແຖບ URL ແລ້ວເລືອກອະນຸຍາດໄມໂຄຣໂຟນ)");
         }
         isRecording = false;
         micBtn.classList.remove('recording');
     };
 }
 
-// 🌟 อัปเกรดฟังก์ชันปุ่มไมค์ ให้บังคับขออนุญาตทุกครั้ง
+// 🌟 อัปเกรดฟังก์ชันปุ่มไมค์ (เอา await ออกเพื่อเอาใจ iOS)
 async function toggleMic() {
-    // If browser supports SpeechRecognition, prefer it. Otherwise, fall back to MediaRecorder upload.
     const hasMediaRecorder = !!(navigator.mediaDevices && window.MediaRecorder);
     if (!recognition && !hasMediaRecorder) {
-        return alert("⚠️ Browser ຂອງທ່ານບໍ່ຮອງຮັບການບັນທຶກ/ການຈຳລອງສຽງ (ແນະນຳໃຫ້ໃຊ້ Google Chrome ຫຼື ອຸປະກອນທີ່ສະຫງວນ).");
+        return alert("⚠️ Browser ຂອງທ່ານບໍ່ຮອງຮັບການບັນທຶກສຽງ (ແນະນຳໃຫ້ໃຊ້ Safari ຫຼື Chrome).");
     }
 
-    // If SpeechRecognition is active, toggle it as before
+    // --- กรณีที่ 1: ระบบรองรับ Web Speech API (iOS เวอร์ชั่นใหม่ และ Chrome) ---
     if (recognition) {
         if (isRecording) {
             recognition.stop();
@@ -210,15 +212,75 @@ async function toggleMic() {
         }
 
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            stream.getTracks().forEach(track => track.stop());
+            // กฎเหล็ก iOS: จิ้มปุ่มปุ๊บ สั่ง start() ทันที ระบบจะเด้งหน้าต่างขออนุญาตไมค์เองแบบถูกต้อง
             recognition.start();
         } catch (err) {
-            console.error("Microphone access denied:", err);
-            alert("⚠️ ບໍ່ສາມາດເປີດໄມໂຄຣໂຟນໄດ້! \nກະລຸນາກວດສອບວ່າທ່ານໄດ້ກົດອະນຸຍາດ (Allow) ແລ້ວຫຼືຍັງ.");
+            console.error("Mic start error:", err);
+            alert("⚠️ ບໍ່ສາມາດເປີດໄມໂຄຣໂຟນໄດ້! ກະລຸນາກວດສອບການອະນຸຍາດ.");
         }
         return;
     }
+
+    // --- กรณีที่ 2: ระบบ Fallback ไปใช้ MediaRecorder (อัดไฟล์ส่ง Server) ---
+    if (isRecordingFallback) {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+        return;
+    }
+
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        recordedChunks = [];
+        const recorderOptions = supportedRecorderMimeType ? { mimeType: supportedRecorderMimeType } : {};
+        mediaRecorder = new MediaRecorder(stream, recorderOptions);
+
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+        };
+
+        mediaRecorder.onstart = () => {
+            isRecordingFallback = true;
+            micBtn.classList.add('recording');
+        };
+
+        mediaRecorder.onstop = async () => {
+            isRecordingFallback = false;
+            micBtn.classList.remove('recording');
+            stream.getTracks().forEach(t => t.stop());
+            
+            const blobType = recordedChunks.length ? recordedChunks[0].type : supportedRecorderMimeType || 'audio/webm';
+            const fileExtension = blobType.includes('mp4') ? 'mp4' : blobType.includes('aac') ? 'aac' : blobType.includes('webm') ? 'webm' : recorderFileExtension;
+            const blob = new Blob(recordedChunks, { type: blobType });
+            
+            try {
+                const form = new FormData();
+                form.append('action', 'transcribeAudio');
+                form.append('file', blob, `recording.${fileExtension}`);
+                const resp = await fetch(CHATBOT_CONFIG.API_URL, {
+                    method: 'POST',
+                    body: form
+                });
+                const result = await resp.json();
+                if (result && result.transcript) {
+                    userInput.value = result.transcript;
+                    sendMessage();
+                } else {
+                    appendMessage('⚠️ ບໍ່ສາມາດຖືກແປງສຽງໄດ້', 'bot-message');
+                }
+            } catch (uploadErr) {
+                appendMessage('🌐 ບໍ່ສາມາດອັບໂຫຼດສຽງໄດ້', 'bot-message');
+            }
+        };
+
+        mediaRecorder.start();
+        // หยุดอัดอัตโนมัติเมื่อครบ 12 วินาที
+        setTimeout(() => {
+            if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+        }, 12000);
+
+    } catch (err) {
+        alert('⚠️ ບໍ່ສາມາດເປີດໄມໂຄຣໂຟນໄດ້! \nກະລຸນາກວດສອບວ່າທ່ານໄດ້ກົດອະນຸຍາດ (Allow) ແລ້ວຫຼືຍັງ.');
+    }
+}
 
     // Fallback: MediaRecorder-based recording (for iOS / browsers without Web Speech API)
     if (isRecordingFallback) {
@@ -286,12 +348,7 @@ async function toggleMic() {
         console.error('MediaRecorder/permission error', err);
         alert('⚠️ ບໍ່ສາມາດເປີດໄມໂຄຣໂຟນໄດ້! \nກະລຸນາກວດສອບວ່າທ່ານໄດ້ກົດອະນຸຍາດ (Allow) ແລ້ວຫຼືຍັງ.');
     }
-}
 
-function refreshVoices() {
-    if (!('speechSynthesis' in window)) return;
-    availableVoices = window.speechSynthesis.getVoices() || [];
-}
 
 function pickBestVoice() {
     const voices = availableVoices.length ? availableVoices : (window.speechSynthesis.getVoices() || []);
