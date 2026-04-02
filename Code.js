@@ -1,11 +1,17 @@
 var GEMINI_API_KEYS = [
+  "AIzaSyAw5pY18otDX98Zj5d9QFWBGCUjLLhS02I",
+  "AIzaSyAcuP3BIF5oKfJGtn7FmOuNlUel0po16GE",  
   "AIzaSyASzdzrmN3xqhGwM87X0WqsHZ5enCFuBC0", // Key 1
   "AIzaSyAW9V1C6bjXgE2EzTpwrr15a4eyYLdW6WE",  // Key 2
-  "AIzaSyAcuP3BIF5oKfJGtn7FmOuNlUel0po16GE"
+  
+  "AIzaSyBMDQSoAps9l_tW74w0NidFneXft78h1gQ",
+  "AIzaSyCiReSFLydaJytmtVr-OxSko2CrsVw6PuU"
+   // Key 3
 ];
 var GOOGLE_DOC_ID = "1cObuEeUbwHTpA05WoHQVymlDMVr-ZR0KVzLjSsWkvC0";
 var GOOGLE_TXT_ID = "1tx6FwdLdDi9Lzl-Ghk780X58XbGm7VLg"; // Your Text File ID
 var ssmi_link = "https://ssmilaos.com/or-structure-headoffice/";
+// var ssmi_info = "https://ssmilaos.com/contact-us/";
 var products_link = "https://ssmilaos.com/our-products/loan/";
 var GOOGLE_SHEET_ID = "1Ipsf6-ryft-AhsyhUhGa3hT7dlDbH7rO2Eu_E8HJX1A";
 var GEMINI_MODEL = "gemini-2.5-flash";
@@ -51,14 +57,14 @@ function doPost(e) {
       }
 
       // 3.3 Define AI Role
-      var systemPrompt = `ເຈົ້າແມ່ນ AI ຜູ້ຊ່ວຍ HR ຂອງອົງກອນ SSMI (ສິນຊັບເມືອງເໜືອ). ຕອນນີ້ເຈົ້າກຳລັງລົມກັບພະນັກງານຊື່: ${userName}.
-ໜ້າທີ່ຫຼັກຂອງເຈົ້າແມ່ນການຕອບຄຳຖາມຂອງພະນັກງານ ກ່ຽວກັບລະບຽບການ, ນະໂຍບາຍ, ສະຫວັດດີການ ແລະ ໂຄງສ້າງອົງກອນ.
-ກົດລະບຽບທີ່ສຳຄັນທີ່ສຸດຂອງເຈົ້າ:
-1. ເຈົ້າຕ້ອງຕອບຄຳຖາມໂດຍອີງໃສ່ຂໍ້ມູນໃນ Context ທີ່ໃຫ້ມາເທົ່ານັ້ນ.
-2. ຖ້າຄຳຖາມໃດທີ່ບໍ່ມີຂໍ້ມູນໃນ Context, ໃຫ້ຕອບວ່າ "ຂໍອະໄພ, ຂ້ອຍບໍ່ມີຂໍ້ມູນໃນສ່ວນນີ້. ກະລຸນາຕິດຕໍ່ພະແນກ HR ເພື່ອສອບຖາມເພີ່ມເຕີມ."
-3. ຫ້າມຄິດຄຳຕອບຂຶ້ນມາເອງ (No Hallucination) ເດັດຂາດ.
-4. ຕ້ອງຕອບເປັນ "ພາສາລາວ" (Lao language) ເທົ່ານັ້ນ, ໃຫ້ໃຊ້ຄຳສັບທີ່ສຸພາບ, ເປັນທາງການແຕ່ເຂົ້າໃຈງ່າຍ.`;
+      var systemPrompt = `You are an AI HR assistant for the organization SSMI (Sinsap Muang Neua). You are currently speaking with an employee named: ${userName}.
+Your main responsibility is to answer employee questions regarding regulations, policies, benefits, and the organizational structure.
 
+Your most important rules are:
+1. You must answer questions based only on the information provided in the given context.
+2. If a question cannot be answered  using the provided context, respond with: "Sorry, I do not have information on this topic. Please contact the HR department for further assistance."
+3. You must not generate or assume any information (No hallucination under any circumstances).
+4. You must respond in clear, polite, and professional Lao language.`;
       // 3.4 Assemble Final Prompt
       var finalPrompt = "Context ຂໍ້ມູນລະບຽບການທັງໝົດ: \n" + knowledgeContext + "\n\n";
 
@@ -284,8 +290,23 @@ function getKnowledgeContext() {
       var docContext = readGoogleDocContent();
       var txtContext = readGoogleTxtContent();
       var webContext = readWebsiteContent(ssmi_link);
+      // var webInfo = readWebsiteContent(ssmi_info);
       var webPro = readWebsiteContent(products_link);
-      var combined = docContext + "\n\n" + txtContext + "\n\n" + webContext + "\n\n" + webPro;
+
+      var combined = "";
+      if (docContext && docContext.trim() !== "") {
+        combined += docContext + "\n\n";
+      }
+      if (txtContext && txtContext.trim() !== "") {
+        combined += txtContext + "\n\n";
+      }
+      if (webContext && webContext.trim() !== "") {
+        combined += webContext + "\n\n";
+      }
+      if (webPro && webPro.trim() !== "") {
+        combined += webPro;
+      }
+
       if (combined.replace(/\s+/g, "").length > 0) {
         cache.put(cacheKey, combined, 21600);
       }

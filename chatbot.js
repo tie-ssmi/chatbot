@@ -22,6 +22,10 @@ window.onload = function() {
         // ถ้า Login แล้ว ให้แสดงหน้าแชท และโหลดประวัติเก่า
         if (document.getElementById('chat-app')) showChat();
         loadChatHistory();
+        const userName = localStorage.getItem('ssmi_user_name');
+        if (userName) {
+            document.getElementById('user-display-name').innerText = '👤 ' + userName;
+        }
     }
 };
 
