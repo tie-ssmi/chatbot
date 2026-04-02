@@ -134,6 +134,9 @@ async function sendMessage() {
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition;
 let isRecording = false;
+let mediaRecorder = null;
+let recordedChunks = [];
+let isRecordingFallback = false;
 
 if (SpeechRecognition) {
     recognition = new SpeechRecognition();
@@ -183,27 +186,91 @@ if (SpeechRecognition) {
 
 // 🌟 อัปเกรดฟังก์ชันปุ่มไมค์ ให้บังคับขออนุญาตทุกครั้ง
 async function toggleMic() {
-    if (!recognition) {
-        return alert("⚠️ Browser ຂອງທ່ານບໍ່ຮອງຮັບລະບົບສັ່ງງານດ້ວຍສຽງ (ແນະນຳໃຫ້ໃຊ້ Google Chrome).");
+    // If browser supports SpeechRecognition, prefer it. Otherwise, fall back to MediaRecorder upload.
+    const hasMediaRecorder = !!(navigator.mediaDevices && window.MediaRecorder);
+    if (!recognition && !hasMediaRecorder) {
+        return alert("⚠️ Browser ຂອງທ່ານບໍ່ຮອງຮັບການບັນທຶກ/ການຈຳລອງສຽງ (ແນະນຳໃຫ້ໃຊ້ Google Chrome ຫຼື ອຸປະກອນທີ່ສະຫງວນ).");
     }
 
-    if (isRecording) {
-        recognition.stop();
+    // If SpeechRecognition is active, toggle it as before
+    if (recognition) {
+        if (isRecording) {
+            recognition.stop();
+            return;
+        }
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(track => track.stop());
+            recognition.start();
+        } catch (err) {
+            console.error("Microphone access denied:", err);
+            alert("⚠️ ບໍ່ສາມາດເປີດໄມໂຄຣໂຟນໄດ້! \nກະລຸນາກວດສອບວ່າທ່ານໄດ້ກົດອະນຸຍາດ (Allow) ແລ້ວຫຼືຍັງ.");
+        }
+        return;
+    }
+
+    // Fallback: MediaRecorder-based recording (for iOS / browsers without Web Speech API)
+    if (isRecordingFallback) {
+        // stop recording
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
         return;
     }
 
     try {
-        // บังคับปลุกไมโครโฟน เพื่อเช็คสิทธิ์ (ถ้ายังไม่เคยอนุญาต มันจะเด้งถามตรงนี้เลย)
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach(track => track.stop());
-        
-        // ถ้าอนุญาตแล้ว ก็เริ่มฟังเสียงเลย
-        recognition.start();
-        
+        // start MediaRecorder
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(stream);
+
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+        };
+
+        mediaRecorder.onstart = () => {
+            isRecordingFallback = true;
+            micBtn.classList.add('recording');
+        };
+
+        mediaRecorder.onstop = async () => {
+            isRecordingFallback = false;
+            micBtn.classList.remove('recording');
+            // stop local tracks
+            stream.getTracks().forEach(t => t.stop());
+            // upload blob to server for transcription
+            const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+            try {
+                const form = new FormData();
+                form.append('action', 'transcribeAudio');
+                form.append('file', blob, 'recording.webm');
+                const resp = await fetch(CHATBOT_CONFIG.API_URL, {
+                    method: 'POST',
+                    body: form
+                });
+                const result = await resp.json();
+                if (result && result.transcript) {
+                    userInput.value = result.transcript;
+                    sendMessage();
+                } else if (result && result.error) {
+                    appendMessage('⚠️ ບໍ່ສາມາດຖືກແປງສຽງ: ' + result.error, 'bot-message');
+                } else {
+                    appendMessage('⚠️ ການແປພາສາບໍ່ສຳເລັດ', 'bot-message');
+                }
+            } catch (uploadErr) {
+                console.error('Upload/transcribe failed', uploadErr);
+                appendMessage('🌐 ບໍ່ສາມາດອັບໂຫຼດສຽງໄດ້', 'bot-message');
+            }
+        };
+
+        mediaRecorder.start();
+        // optional: auto-stop after 12s to avoid very long recordings
+        setTimeout(() => {
+            if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+        }, 12000);
+
     } catch (err) {
-        // ถ้าเข้าเงื่อนไขนี้ แปลว่าพนักงานกด "Block" หรือคอมพิวเตอร์ไม่มีไมค์
-        console.error("Microphone access denied:", err);
-        alert("⚠️ ບໍ່ສາມາດເປີດໄມໂຄຣໂຟນໄດ້! \nກະລຸນາກວດສອບວ່າທ່ານໄດ້ກົດອະນຸຍາດ (Allow) ແລ້ວຫຼືຍັງ.");
+        console.error('MediaRecorder/permission error', err);
+        alert('⚠️ ບໍ່ສາມາດເປີດໄມໂຄຣໂຟນໄດ້! \nກະລຸນາກວດສອບວ່າທ່ານໄດ້ກົດອະນຸຍາດ (Allow) ແລ້ວຫຼືຍັງ.');
     }
 }
 
