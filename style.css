@@ -181,7 +181,7 @@ body {
 
 @media (max-width: 560px) {
     .chat-header { padding: 12px; }
-    /* .header-text small { display: none; } */
+    .header-text small { display: none; }
     #bot-title { font-size: 0.92rem; }
     .header-actions { gap: 6px; }
     .voice-toggle span { display: none; }
