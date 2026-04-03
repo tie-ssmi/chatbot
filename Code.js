@@ -1,16 +1,21 @@
 var GEMINI_API_KEYS = [
   "AIzaSyAw5pY18otDX98Zj5d9QFWBGCUjLLhS02I",
+  "AIzaSyBjcIdyDKp8UC33OVjImYbIb2jrJX-zSLc",
   "AIzaSyD0jW7EyZco6iRrnLOX5bi15Ji6edf4DPk",
   "AIzaSyAcuP3BIF5oKfJGtn7FmOuNlUel0po16GE",  
   "AIzaSyASzdzrmN3xqhGwM87X0WqsHZ5enCFuBC0", 
   "AIzaSyAW9V1C6bjXgE2EzTpwrr15a4eyYLdW6WE",  
   "AIzaSyBMDQSoAps9l_tW74w0NidFneXft78h1gQ",
   "AIzaSyCiReSFLydaJytmtVr-OxSko2CrsVw6PuU",
+  "AIzaSyCsQWiLyQlQBbApf-KVmH1tj7FSDs-hatY",
+  "AIzaSyA4cYCKylAkOL1P-KRuA4N34fzoO9HOJEE",
   "AIzaSyCUdXTmWxDtVdg6cyG2j3MlgZTl0VZr9eQ"
 ];
 var GOOGLE_DOC_ID = "1cObuEeUbwHTpA05WoHQVymlDMVr-ZR0KVzLjSsWkvC0";
 var GOOGLE_TXT_ID = "1tx6FwdLdDi9Lzl-Ghk780X58XbGm7VLg"; 
 var GOOGLE_SHEET_ID = "1Ipsf6-ryft-AhsyhUhGa3hT7dlDbH7rO2Eu_E8HJX1A";
+
+var IMAGE_FOLDER_ID = "1TxL2wcMH2oLK4l8eMxjbi6FUq-0oL_XH";
 
 
 var GEMINI_MODEL = "gemini-2.5-flash"; 
@@ -48,7 +53,7 @@ function doPost(e) {
         historyContext = getRecentHistoryText(userId);
       }
 
-      // 3.3 Define AI Role
+      // 3.3 Define AI Role (เพิ่มกฎข้อ 5 บังคับให้อ่านรูป)
       var systemPrompt = `You are an AI HR assistant for the organization SSMI (Sinsap Muang Neua). You are currently speaking with an employee named: ${userName}.
 Your main responsibility is to answer employee questions regarding regulations, policies, benefits, and the organizational structure.
 
@@ -56,7 +61,8 @@ Your most important rules are:
 1. You must answer questions based only on the information provided in the given context.
 2. If a question cannot be answered using the provided context, respond with: "Sorry, I do not have information on this topic. Please contact the HR department for further assistance."
 3. You must not generate or assume any information (No hallucination under any circumstances).
-4. You must respond in clear, polite, and professional Lao language.`;
+4. You must respond in clear, polite, and professional Lao language.
+5. CRITICAL: If the user uploads an image (such as a receipt, form, or document), you MUST act as an expert document scanner (OCR). Carefully read and extract ALL visible text, tables, numbers, and details within the image. Then, use that extracted information to match with the HR regulations to answer the user's question accurately.`;
       
       // 3.4 Assemble Final Prompt
       var finalPrompt = "Context ຂໍ້ມູນລະບຽບການທັງໝົດ: \n" + knowledgeContext + "\n\n";
@@ -66,6 +72,22 @@ Your most important rules are:
       }
       finalPrompt += "ຄຳຖາມປັດຈຸບັນຈາກພະນັກງານ: " + userMessage;
 
+      // 🌟 เพิ่มคำสั่งกระตุ้นเตือน ถ้ายูสเซอร์แนบรูปมา
+      if (requestData.imageBase64 && requestData.imageMimeType) {
+         finalPrompt += "\n\n[System Note: ພະນັກງານໄດ້ແນບຮູບພາບເອກະສານມາພ້ອມ. ຈົ່ງອ່ານຂໍ້ຄວາມ ແລະ ຕົວເລກທັງໝົດໃນຮູບພາບຢ່າງລະອຽດ, ແລ້ວນຳມາປຽບທຽບກັບລະບຽບການເພື່ອຕອບຄຳຖາມ.]";
+      }
+
+      // เตรียมข้อมูล Prompt เป็น Array เพื่อรองรับทั้ง Text และ Image
+      var partsArray = [{ "text": finalPrompt }];
+
+      if (requestData.imageBase64 && requestData.imageMimeType) {
+        partsArray.push({
+          "inlineData": {
+            "mimeType": requestData.imageMimeType,
+            "data": requestData.imageBase64
+          }
+        });
+      }
       var payload = {
         "contents": [{
           "role": "user",
@@ -107,17 +129,19 @@ Your most important rules are:
       }
 
       // 3.6 Log and Return
+      // 3.6 Log and Return
       if (aiReply) {
-        logToSheet(userId, userName, userMessage, aiReply, "Success"); 
+        var imageUrl = "";
+        if (requestData.imageBase64) {
+          imageUrl = saveImageToDrive(requestData.imageBase64, requestData.imageMimeType, userId);
+        }
+        // 🌟 ส่ง imageUrl ไปบันทึกด้วย
+        logToSheet(userId, userName, userMessage, aiReply, "Success", imageUrl); 
         return createJsonResponse({ reply: aiReply });
       } else {
-        logToSheet(userId, userName, userMessage, lastError, "Error");
+        logToSheet(userId, userName, userMessage, lastError, "Error", "");
         return createJsonResponse({ error: "AI ບໍ່ສາມາດສ້າງຄຳຕອບໄດ້ໃນຕອນນີ້. (API ອາດຈະຕິດລິມິດ)" });
       }
-    }
-  } catch (err) {
-    return createJsonResponse({ error: "ເກີດຂໍ້ຜິດພາດ: " + err.toString() });
-  }
 }
 
 // ==========================================
@@ -143,11 +167,12 @@ function handleLogin(username, password) {
 // ==========================================
 // 3. Log History to Sheets
 // ==========================================
-function logToSheet(userId, userName, question, answer, status) {
+function logToSheet(userId, userName, question, answer, status, imageUrl) { // 🌟 เพิ่มตัวแปร imageUrl
   try {
     var sheet = SpreadsheetApp.openById(GOOGLE_SHEET_ID).getSheetByName(LOG_SHEET_NAME);
     if(sheet) {
-      sheet.appendRow([new Date(), userId, userName, question, answer, status]);
+      // 🌟 เพิ่ม imageUrl ลงไปในคอลัมน์ที่ 7
+      sheet.appendRow([new Date(), userId, userName, question, answer, status, imageUrl || ""]);
     }
   } catch (e) {}
 }
@@ -216,11 +241,18 @@ function getChatHistory(userId) {
   try {
     var sheet = SpreadsheetApp.openById(GOOGLE_SHEET_ID).getSheetByName(LOG_SHEET_NAME);
     if (!sheet) return createJsonResponse({ history: [] });
-    var data = getRecentLogRows(sheet, 1200, 5);
+    
+    // 🌟 เปลี่ยนเลข 5 เป็นเลข 7 เพื่อให้มันดึงข้อมูลรูปภาพจากคอลัมน์ที่ 7 มาด้วย
+    var data = getRecentLogRows(sheet, 1200, 7); 
+    
     var history = [];
     for (var i = data.length - 1; i >= 1 && history.length < 15; i--) {
       if (data[i][1].toString() === userId) {
-        history.unshift({ question: data[i][3], answer: data[i][4] });
+        history.unshift({ 
+          question: data[i][3], 
+          answer: data[i][4],
+          imageUrl: data[i][6] ? data[i][6].toString() : "" // 🌟 ส่งลิงก์รูปกลับไปให้หน้าเว็บ
+        });
       }
     }
     return createJsonResponse({ history: history });
@@ -332,4 +364,22 @@ function getRecentLogRows(sheet, maxRows, columnCount) {
   var startRow = Math.max(2, lastRow - maxRows + 1);
   var numRows = lastRow - startRow + 1;
   return sheet.getRange(startRow, 1, numRows, columnCount).getValues();
+}
+
+function saveImageToDrive(base64, mimeType, userId) {
+  try {
+    var folder = DriveApp.getFolderById(IMAGE_FOLDER_ID);
+    var fileName = "IMG_" + userId + "_" + new Date().getTime();
+    var blob = Utilities.newBlob(Utilities.base64Decode(base64), mimeType, fileName);
+    var file = folder.createFile(blob);
+    
+    // ตั้งค่าให้ใครที่มีลิงก์ก็ดูรูปได้ (เพื่อให้หน้าเว็บดึงไปโชว์ได้)
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    
+    // เปลี่ยน URL ให้เป็นแบบ Direct Link สำหรับแสดงผล
+    return "https://drive.google.com/uc?export=view&id=" + file.getId();
+  } catch (e) {
+    console.log("Save Image Error: " + e.toString());
+    return "";
+  }
 }

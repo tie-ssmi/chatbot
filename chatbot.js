@@ -56,7 +56,13 @@ async function loadChatHistory() {
         const data = await response.json();
         if (data.history && data.history.length > 0) {
             data.history.forEach(item => {
-                appendMessage(item.question, 'user-message');
+                if (item.imageUrl) {
+                    const imgHtml = `<img src="${item.imageUrl}" style="max-width: 100%; max-height: 200px; border-radius: 8px; margin-bottom: 5px;"><br>${item.question}`;
+                    appendMessage(imgHtml, 'user-message', null, true);
+                } else {
+                    appendMessage(item.question, 'user-message');
+                }
+                
                 if (!item.answer.includes("API Error")) {
                     // 🌟 เพิ่มการแปลง \n เป็น <br> และแปลง **ข้อความ** เป็นตัวหนา
                     let formattedAnswer = item.answer.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
