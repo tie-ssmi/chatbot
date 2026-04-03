@@ -26,6 +26,7 @@ body {
     justify-content: center; 
     align-items: center; 
     min-height: 100vh;
+   
 }
 
 .chat-container { 
@@ -116,6 +117,7 @@ body {
     border-top: 1px solid var(--border-color);
     gap: 10px;
     align-items: center;
+   
 }
 .chat-input-area input {
     flex-grow: 1;
@@ -180,7 +182,6 @@ body {
 
 @media (max-width: 560px) {
     .chat-header { padding: 12px; }
-    
     #bot-title { font-size: 0.92rem; }
     .header-actions { gap: 6px; }
     .voice-toggle span { display: none; }
@@ -188,6 +189,10 @@ body {
     .logout-btn { font-size: 0.75rem; padding: 6px 9px; }
     .chat-messages { padding: 14px; }
     .message { max-width: 90%; font-size: 0.92rem; }
+    .chat-input-area small {  position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%; }
     .chat-input-area { padding: 10px; }
     .chat-input-area input { font-size: 0.93rem; }
     .action-btn { width: 42px; height: 42px; border-radius: 12px; }
