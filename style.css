@@ -211,3 +211,54 @@ body {
     .message { font-size: 0.97rem; }
     .chat-input-area { padding: 16px 18px; }
 }
+
+/* 🌟 CSS สำหรับ Modal ซูมรูปภาพ */
+.image-modal {
+    display: none; /* ซ่อนไว้ก่อน */
+    position: fixed; 
+    z-index: 10000; 
+    left: 0; 
+    top: 0; 
+    width: 100vw; 
+    height: 100vh; 
+    background-color: rgba(0,0,0,0.85); 
+    backdrop-filter: blur(4px);
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+.modal-content {
+    max-width: 90%;
+    max-height: 85vh;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    animation: zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.close-modal {
+    position: absolute;
+    top: 20px;
+    right: 35px;
+    color: #f1f1f1;
+    font-size: 45px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.close-modal:hover { color: var(--accent-color); }
+
+@keyframes zoomIn {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* เอฟเฟกต์ตอนเอาเมาส์ชี้รูปในแชท */
+.chat-img { 
+    cursor: zoom-in; 
+    transition: 0.2s ease; 
+}
+.chat-img:hover { 
+    opacity: 0.85; 
+}

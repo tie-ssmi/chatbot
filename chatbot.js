@@ -57,7 +57,7 @@ async function loadChatHistory() {
         if (data.history && data.history.length > 0) {
             data.history.forEach(item => {
                 if (item.imageUrl) {
-                    const imgHtml = `<img src="${item.imageUrl}" style="max-width: 100%; max-height: 200px; border-radius: 8px; margin-bottom: 5px;"><br>${item.question}`;
+                  const imgHtml = `<img src="${item.imageUrl}" class="chat-img" onclick="openModal(this.src)" style="max-width: 100%; max-height: 200px; border-radius: 8px; margin-bottom: 5px;"><br>${item.question}`;
                     appendMessage(imgHtml, 'user-message', null, true);
                 } else {
                     appendMessage(item.question, 'user-message');
@@ -113,7 +113,7 @@ async function sendMessage() {
     // 🌟 จัดรูปแบบข้อความฝั่ง User ให้โชว์รูปในแชทด้วย
     let userDisplayHtml = text;
     if (currentImageBase64) {
-        userDisplayHtml = `<img src="data:${currentImageMimeType};base64,${currentImageBase64}" style="max-width: 100%; max-height: 200px; border-radius: 8px; margin-bottom: 5px;"><br>` + text;
+       userDisplayHtml = `<img src="data:${currentImageMimeType};base64,${currentImageBase64}" class="chat-img" onclick="openModal(this.src)" style="max-width: 100%; max-height: 200px; border-radius: 8px; margin-bottom: 5px;"><br>` + text;
     }
 
     // 🌟 ใส่ parameter 'true' ด้านหลังสุด เพื่อให้มันเรนเดอร์แท็ก <img> ได้
@@ -400,6 +400,21 @@ if ('speechSynthesis' in window) {
     window.speechSynthesis.addEventListener('voiceschanged', () => {
         refreshVoices();
     });
+}
+
+// 🌟 ฟังก์ชันเปิด-ปิด รูปภาพ (ซูมรูป)
+function openModal(src) {
+    let fullSrc = src;
+    // ทริค: ถ้าเป็นลิงก์จาก Drive ให้แอบขยายขนาดภาพ (w800 เป็น w2000) เพื่อให้ภาพชัดขึ้นตอนซูม
+    if(src.includes('thumbnail?id=') && src.includes('&sz=w800')) {
+         fullSrc = src.replace('&sz=w800', '&sz=w2000'); 
+    }
+    document.getElementById("image-modal").style.display = "flex";
+    document.getElementById("modal-img").src = fullSrc;
+}
+
+function closeModal() {
+    document.getElementById("image-modal").style.display = "none";
 }
 function removeMessage(id) { const el = document.getElementById(id); if (el) el.remove(); }
 function toggleInput(enable) { userInput.disabled = !enable; sendBtn.disabled = !enable; if(enable) userInput.focus(); }
