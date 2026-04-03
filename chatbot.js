@@ -303,6 +303,7 @@ function pickBestVoice() {
     const laoFamily = voices.find(v => (v.lang || '').toLowerCase().startsWith('lo'));
     return laoFamily || null;
 }
+let hasWarnedNoLaoVoice = false;
 
 function speakText(text) {
     if (!('speechSynthesis' in window)) return;
