@@ -73,17 +73,56 @@ async function loadChatHistory() {
 // 2. โลจิกการส่งข้อความ (ตัวที่สมบูรณ์)
 // ==========================================
 let currentChatHistory = [];
-async function sendMessage() {
-    const text = userInput.value.trim();
-    if (!text) return;
+// 🌟 ระบบจัดการรูปภาพ
+let currentImageBase64 = null;
+let currentImageMimeType = null;
 
-    // แสดงข้อความฝั่ง User
-    appendMessage(text, 'user-message');
+function handleImageSelection(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        // แยกเอาเฉพาะข้อมูล Base64 ทิ้งส่วน Header ไป
+        currentImageBase64 = e.target.result.split(',')[1];
+        currentImageMimeType = file.type;
+
+        document.getElementById('image-preview').src = e.target.result;
+        document.getElementById('image-preview-container').style.display = 'flex';
+    };
+    reader.readAsDataURL(file);
+}
+
+function clearImage() {
+    currentImageBase64 = null;
+    currentImageMimeType = null;
+    document.getElementById('image-upload').value = '';
+    document.getElementById('image-preview-container').style.display = 'none';
+}
+async function sendMessage() {
+    // 🌟 ดึงทั้งข้อความและรูปภาพ (อนุญาตให้ส่งแต่รูปเปล่าๆ ได้ด้วย)
+    const text = userInput.value.trim();
+    if (!text && !currentImageBase64) return;
+
+    // 🌟 จัดรูปแบบข้อความฝั่ง User ให้โชว์รูปในแชทด้วย
+    let userDisplayHtml = text;
+    if (currentImageBase64) {
+        userDisplayHtml = `<img src="data:${currentImageMimeType};base64,${currentImageBase64}" style="max-width: 100%; max-height: 200px; border-radius: 8px; margin-bottom: 5px;"><br>` + text;
+    }
+
+    // 🌟 ใส่ parameter 'true' ด้านหลังสุด เพื่อให้มันเรนเดอร์แท็ก <img> ได้
+    appendMessage(userDisplayHtml, 'user-message', null, true); 
+    
     userInput.value = '';
     toggleInput(false);
 
     const userId = localStorage.getItem('ssmi_user_id') || "Unknown";
     const userName = localStorage.getItem('ssmi_user_name') || "ພະນັກງານ";
+
+    // 🌟 เก็บข้อมูลรูปลงตัวแปรก่อน แล้วค่อยล้างกล่องรูป
+    const payloadImageBase64 = currentImageBase64;
+    const payloadImageMimeType = currentImageMimeType;
+    clearImage(); // ล้างกล่อง Preview
 
     const loadingId = 'loading-' + Date.now();
     appendMessage('<div class="typing-indicator"><span></span><span></span><span></span></div>', 'bot-message', loadingId, true);
@@ -93,10 +132,13 @@ async function sendMessage() {
             method: 'POST',
             body: JSON.stringify({ 
                 action: 'chat', 
-                message: text,
+                message: text || "ກວດເບິ່ງຮູບນີ້ໃຫ້ແດ່", // ถ้าไม่พิมพ์อะไรเลย ให้ส่งคำสั่งพื้นฐานไป
                 userId: userId,
                 userName: userName,
-                history: currentChatHistory // <--- ส่งประวัติไปด้วย
+                history: currentChatHistory,
+                // 🌟 แนบรูปภาพไปให้ Apps Script
+                imageBase64: payloadImageBase64,
+                imageMimeType: payloadImageMimeType
             }),
             headers: { 'Content-Type': 'text/plain;charset=utf-8' }
         });
