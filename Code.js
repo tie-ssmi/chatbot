@@ -1,22 +1,11 @@
 var GEMINI_API_KEYS = [
-  "AIzaSyAw5pY18otDX98Zj5d9QFWBGCUjLLhS02I",
-  "AIzaSyBjcIdyDKp8UC33OVjImYbIb2jrJX-zSLc",
-  "AIzaSyD0jW7EyZco6iRrnLOX5bi15Ji6edf4DPk",
-  "AIzaSyAcuP3BIF5oKfJGtn7FmOuNlUel0po16GE",  
-  "AIzaSyASzdzrmN3xqhGwM87X0WqsHZ5enCFuBC0", 
-  "AIzaSyAW9V1C6bjXgE2EzTpwrr15a4eyYLdW6WE",  
-  "AIzaSyBMDQSoAps9l_tW74w0NidFneXft78h1gQ",
-  "AIzaSyCiReSFLydaJytmtVr-OxSko2CrsVw6PuU",
-  "AIzaSyCsQWiLyQlQBbApf-KVmH1tj7FSDs-hatY",
-  "AIzaSyA4cYCKylAkOL1P-KRuA4N34fzoO9HOJEE",
-  "AIzaSyCUdXTmWxDtVdg6cyG2j3MlgZTl0VZr9eQ"
+  "AIzaSyD-EXAMPLE-KEY-1",
 ];
 var GOOGLE_DOC_ID = "1cObuEeUbwHTpA05WoHQVymlDMVr-ZR0KVzLjSsWkvC0";
-var GOOGLE_TXT_ID = "1tx6FwdLdDi9Lzl-Ghk780X58XbGm7VLg"; 
+var GOOGLE_TXT_ID = "1tx6FwdLdDi9Lzl-Ghk780X58XbGm7VLg00"; 
 var GOOGLE_SHEET_ID = "1Ipsf6-ryft-AhsyhUhGa3hT7dlDbH7rO2Eu_E8HJX1A";
 
 var IMAGE_FOLDER_ID = "1TxL2wcMH2oLK4l8eMxjbi6FUq-0oL_XH";
-
 
 var GEMINI_MODEL = "gemini-2.5-flash"; 
 
@@ -47,13 +36,13 @@ function doPost(e) {
         return createJsonResponse({ error: "ບໍ່ສາມາດອ່ານຂໍ້ມູນຈາກລະບົບເອກະສານໄດ້ (ໄຟລ໌ອາດຈະໃຫຍ່ເກີນໄປ ຫຼື ບໍ່ພົບໄຟລ໌)" });
       }
 
-      // 3.2 Prefer lightweight client-side history, fallback to sheet history
+      // 3.2 Prefer lightweight client-side history
       var historyContext = buildHistoryTextFromClient(clientHistory);
       if (!historyContext) {
         historyContext = getRecentHistoryText(userId);
       }
 
-      // 3.3 Define AI Role (เพิ่มกฎข้อ 5 บังคับให้อ่านรูป)
+      // 3.3 Define AI Role 
       var systemPrompt = `You are an AI HR assistant for the organization SSMI (Sinsap Muang Neua). You are currently speaking with an employee named: ${userName}.
 Your main responsibility is to answer employee questions regarding regulations, policies, benefits, and the organizational structure.
 
@@ -72,12 +61,10 @@ Your most important rules are:
       }
       finalPrompt += "ຄຳຖາມປັດຈຸບັນຈາກພະນັກງານ: " + userMessage;
 
-      // 🌟 เพิ่มคำสั่งกระตุ้นเตือน ถ้ายูสเซอร์แนบรูปมา
       if (requestData.imageBase64 && requestData.imageMimeType) {
          finalPrompt += "\n\n[System Note: ພະນັກງານໄດ້ແນບຮູບພາບເອກະສານມາພ້ອມ. ຈົ່ງອ່ານຂໍ້ຄວາມ ແລະ ຕົວເລກທັງໝົດໃນຮູບພາບຢ່າງລະອຽດ, ແລ້ວນຳມາປຽບທຽບກັບລະບຽບການເພື່ອຕອບຄຳຖາມ.]";
       }
 
-      // เตรียมข้อมูล Prompt เป็น Array เพื่อรองรับทั้ง Text และ Image
       var partsArray = [{ "text": finalPrompt }];
 
       if (requestData.imageBase64 && requestData.imageMimeType) {
@@ -88,17 +75,24 @@ Your most important rules are:
           }
         });
       }
+
+      // 🌟 ย้ายระบบเซฟรูปลง Drive มาไว้ตรงนี้ (ให้เซฟทันที ไม่ต้องรอ AI)
+      var imageUrl = "";
+      if (requestData.imageBase64 && requestData.imageMimeType) {
+        imageUrl = saveImageToDrive(requestData.imageBase64, requestData.imageMimeType, userId);
+      }
+
       var payload = {
         "contents": [{
           "role": "user",
-          "parts": [{ "text": finalPrompt }]
+          "parts": partsArray 
         }],
         "systemInstruction": {
           "parts": [{ "text": systemPrompt }]
         },
         "generationConfig": {
           "temperature": 0.2, 
-          "maxOutputTokens": 8000 // 🌟 ให้ตอบได้ยาวๆ
+          "maxOutputTokens": 8000 
         }
       };
 
@@ -112,7 +106,6 @@ Your most important rules are:
       var aiReply = null;
       var lastError = "";
 
-      // 🌟 สับไพ่สุ่ม API Keys (Load Balance)
       var shuffledKeys = GEMINI_API_KEYS.slice().sort(function() { return 0.5 - Math.random() });
 
       for (var i = 0; i < shuffledKeys.length; i++) {
@@ -129,19 +122,17 @@ Your most important rules are:
       }
 
       // 3.6 Log and Return
-      // 3.6 Log and Return
       if (aiReply) {
-        var imageUrl = "";
-        if (requestData.imageBase64) {
-          imageUrl = saveImageToDrive(requestData.imageBase64, requestData.imageMimeType, userId);
-        }
-        // 🌟 ส่ง imageUrl ไปบันทึกด้วย
         logToSheet(userId, userName, userMessage, aiReply, "Success", imageUrl); 
         return createJsonResponse({ reply: aiReply });
       } else {
-        logToSheet(userId, userName, userMessage, lastError, "Error", "");
+        logToSheet(userId, userName, userMessage, lastError, "Error", imageUrl);
         return createJsonResponse({ error: "AI ບໍ່ສາມາດສ້າງຄຳຕອບໄດ້ໃນຕອນນີ້. (API ອາດຈະຕິດລິມິດ)" });
       }
+    }
+  } catch (err) {
+    return createJsonResponse({ error: "ເກີດຂໍ້ຜິດພາດ: " + err.toString() });
+  }
 }
 
 // ==========================================
@@ -167,18 +158,17 @@ function handleLogin(username, password) {
 // ==========================================
 // 3. Log History to Sheets
 // ==========================================
-function logToSheet(userId, userName, question, answer, status, imageUrl) { // 🌟 เพิ่มตัวแปร imageUrl
+function logToSheet(userId, userName, question, answer, status, imageUrl) { 
   try {
     var sheet = SpreadsheetApp.openById(GOOGLE_SHEET_ID).getSheetByName(LOG_SHEET_NAME);
     if(sheet) {
-      // 🌟 เพิ่ม imageUrl ลงไปในคอลัมน์ที่ 7
       sheet.appendRow([new Date(), userId, userName, question, answer, status, imageUrl || ""]);
     }
   } catch (e) {}
 }
 
 // ==========================================
-// 4. Read Google Docs (With Cache Fix)
+// 4. Read Google Docs
 // ==========================================
 function readGoogleDocContent() {
   var cache = CacheService.getScriptCache();
@@ -206,7 +196,6 @@ function readGoogleDocContent() {
     }
     extractTextFromTabs(allTabs); 
     
-    // 🌟 ดัก Error เพื่อไม่ให้ระบบพังถ้าไฟล์เอกสารใหญ่เกิน 100KB
     try { cache.put(cacheKey, fullText, 21600); } catch(e) {}
     
     return fullText;
@@ -214,7 +203,7 @@ function readGoogleDocContent() {
 }
 
 // ==========================================
-// 5. Read Text File from Drive (With Cache Fix)
+// 5. Read Text File from Drive
 // ==========================================
 function readGoogleTxtContent() {
   var cache = CacheService.getScriptCache();
@@ -227,7 +216,6 @@ function readGoogleTxtContent() {
     var txtContent = file.getBlob().getDataAsString();
     var finalTxtContext = "--- [ຂໍ້ມູນເພີ່ມເຕີມຈາກ TXT File] ---\n" + txtContent;
     
-    // 🌟 ดัก Error
     try { cache.put(cacheKey, finalTxtContext, 21600); } catch(e) {}
     
     return finalTxtContext;
@@ -242,7 +230,6 @@ function getChatHistory(userId) {
     var sheet = SpreadsheetApp.openById(GOOGLE_SHEET_ID).getSheetByName(LOG_SHEET_NAME);
     if (!sheet) return createJsonResponse({ history: [] });
     
-    // 🌟 เปลี่ยนเลข 5 เป็นเลข 7 เพื่อให้มันดึงข้อมูลรูปภาพจากคอลัมน์ที่ 7 มาด้วย
     var data = getRecentLogRows(sheet, 1200, 7); 
     
     var history = [];
@@ -251,7 +238,7 @@ function getChatHistory(userId) {
         history.unshift({ 
           question: data[i][3], 
           answer: data[i][4],
-          imageUrl: data[i][6] ? data[i][6].toString() : "" // 🌟 ส่งลิงก์รูปกลับไปให้หน้าเว็บ
+          imageUrl: data[i][6] ? data[i][6].toString() : "" 
         });
       }
     }
@@ -311,7 +298,6 @@ function getKnowledgeContext() {
       }
 
       if (combined.replace(/\s+/g, "").length > 0) {
-        // 🌟 ดัก Error
         try { cache.put(cacheKey, combined, 21600); } catch(e) {}
       }
       return combined;
@@ -323,7 +309,6 @@ function getKnowledgeContext() {
     }
   }
 
-  // Fallback: ดึงแค่อ่าน Docs ແລະ Txt
   var fallback = readGoogleDocContent() + "\n\n" + readGoogleTxtContent();
   return fallback;
 }
@@ -361,7 +346,7 @@ function buildHistoryTextFromClient(history) {
 function getRecentLogRows(sheet, maxRows, columnCount) {
   var lastRow = sheet.getLastRow();
   if (lastRow < 2) return [["", "", "", "", ""]];
-  var startRow = Math.max(2, lastRow - maxRows + 1);
+  var startRow = Math.max(2, lastRow - maxRows + 1);  
   var numRows = lastRow - startRow + 1;
   return sheet.getRange(startRow, 1, numRows, columnCount).getValues();
 }
@@ -373,13 +358,17 @@ function saveImageToDrive(base64, mimeType, userId) {
     var blob = Utilities.newBlob(Utilities.base64Decode(base64), mimeType, fileName);
     var file = folder.createFile(blob);
     
-    // ตั้งค่าให้ใครที่มีลิงก์ก็ดูรูปได้ (เพื่อให้หน้าเว็บดึงไปโชว์ได้)
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     
-    // เปลี่ยน URL ให้เป็นแบบ Direct Link สำหรับแสดงผล
-    return "https://drive.google.com/uc?export=view&id=" + file.getId();
+    
+    return "https://drive.google.com/thumbnail?id=" + file.getId() + "&sz=w800";
   } catch (e) {
-    console.log("Save Image Error: " + e.toString());
-    return "";
+    // 🌟 คาย Error ออกมาให้รู้กันไปเลยว่าพังเพราะอะไร!
+    return "ERROR_SAVE_IMAGE: " + e.toString();
   }
+}
+
+// 🌟 ฟังก์ชันตัวล่อเวอร์ชันใหม่ (บังคับขอสิทธิ์สร้างไฟล์)
+function authorizeDrive() {
+  DriveApp.createFile("test_permission.txt", "ทดสอบขอสิทธิ์"); 
 }
