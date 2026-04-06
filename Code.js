@@ -1,5 +1,5 @@
 var GEMINI_API_KEYS = [
-  "****"
+  "*****"
 ];
 var GOOGLE_DOC_ID = "1cObuEeUbwHTpA05WoHQVymlDMVr-ZR0KVzLjSsWkvC0";
 var GOOGLE_TXT_ID = "1tx6FwdLdDi9Lzl-Ghk780X58XbGm7VLg00"; 
@@ -40,7 +40,16 @@ function doPost(e) {
 
       var clientHistory = normalizeClientHistory(requestData.history);
       var cachedContentName = PropertiesService.getScriptProperties().getProperty("GEMINI_CACHE_NAME");
-      var knowledgeContext = "";
+
+      // 🌟 รับค่าหมวดหมู่ AI ที่พนักงานเลือก
+      var selectedCategory = requestData.modelCategory || "hr"; 
+      
+      // ดึงข้อมูลเฉพาะแท็บที่เลือก (ปิดระบบ Cache เดิมไปก่อน เพราะข้อมูลสั้นลงมากแล้ว)
+      var knowledgeContext = getKnowledgeByCategory(selectedCategory);
+      if (!knowledgeContext) return createJsonResponse({ error: "ຂໍອະໄພ, ບໍ່ພົບຂໍ້ມູນລະບຽບໃນໝວດໝູ່ນີ້" });
+
+      var historyContext = buildHistoryTextFromClient(clientHistory);
+      if (!historyContext) historyContext = getRecentHistoryText(userId);
       
       if (!cachedContentName) {
          knowledgeContext = getKnowledgeContext();
@@ -65,11 +74,12 @@ Your strict rules:
 CRITICAL: Work/regulation questions are NOT small talk.
 
 --- AUDITOR & MULTIMODAL RULES ---
-8. If the user uploads multiple documents (like Images, PDFs, Invoices, Slips, Quotations):
+8. If the user uploads multiple documents:
    - Act as an extremely strict and expert company auditor.
    - Cross-check ALL values, names, account numbers, and totals across the uploaded documents.
    - Compare the findings with the HR/Company Regulations in your context.
-   - Summarize your findings clearly using bullet points. Point out any discrepancies (ຂໍ້ຜິດພາດ), and state whether the document set is approved/correct according to the rules.`;
+   - Summarize your findings using bullet points. Point out any discrepancies (ຂໍ້ຜິດພາດ), and state whether it is approved/correct.
+   - CRITICAL: Keep your summary CONCISE and straight to the point (ສະຫຼຸບໃຫ້ສັ້ນ, ກະຊັບ, ແລະ ເຂົ້າໃຈງ່າຍ). You MUST ensure your response is fully complete and NEVER cut off mid-sentence.`;
 
       var finalPrompt = "";
       if (!cachedContentName) finalPrompt += "Context ຂໍ້ມູນລະບຽບການທັງໝົດ: \n" + knowledgeContext + "\n\n";
@@ -240,28 +250,57 @@ function logToSheet(userId, userName, question, answer, status, imageUrl) {
   } catch (e) {}
 }
 
-function readGoogleDocContent() {
+function getKnowledgeByCategory(category) {
   var cache = CacheService.getScriptCache();
-  var cachedDoc = cache.get("HR_DOC_V5");
-  if (cachedDoc) return cachedDoc; 
+  var cacheKey = "DOC_TAB_" + category;
+  var cachedData = cache.get(cacheKey);
+  if (cachedData) return cachedData; // ถ้ามีในความจำระยะสั้น ดึงมาตอบเลย
+
   try {
+    // 🌟 Map ชื่อภาษาอังกฤษ กับ ชื่อแท็บภาษาลาวให้ตรงเป๊ะ
+    var tabMapping = {
+      "hr": "ລະບຽບວ່າດ້ວຍພະນັກງານ ແລະ ການບໍລິຫານບຸກຄະລາກອນ",
+      "expense": "ລະບຽບວ່າດ້ວຍການຄຸ້ມຄອງລາຍຈ່າຍ ແລະ ການລົງບັນຊີ",
+      "loan_gov": "ລະບຽບວ່າດ້ວຍສິນເຊື່ອ ລັດຖະກອນ",
+      "loan_sec": "ລະບຽບວ່າດ້ວຍສິນເຊື່ອ ຫຼັກຊັບຄ້ຳປະກັນ",
+      "deposit": "ລະບຽບວ່າດ້ວຍເງິນຝາກ"
+    };
+
+    var targetTabTitle = tabMapping[category];
+    if (!targetTabTitle) targetTabTitle = tabMapping["hr"]; // Default
+    
     var doc = DocumentApp.openById(GOOGLE_DOC_ID);
     var allTabs = doc.getTabs(); 
-    var fullText = "";
-    function extractTextFromTabs(tabs) {
+    var extractedText = "";
+
+    // วนลูปหาแท็บที่ชื่อตรงกับที่เลือก
+    function findAndExtractTab(tabs) {
       for (var i = 0; i < tabs.length; i++) {
         var tab = tabs[i];
-        if (tab.getType() === DocumentApp.TabType.DOCUMENT_TAB) {
-           try { fullText += "--- [ໝວດໝູ່: " + tab.getTitle() + "] ---\n" + tab.asDocumentTab().getBody().getText() + "\n\n"; } catch (err) {}
+        if (tab.getTitle().trim() === targetTabTitle.trim()) {
+          // เจอแท็บเป้าหมายแล้ว! สั่งดูดข้อความทั้งหมดออกมา
+           try { extractedText = "--- [ໝວດໝູ່: " + tab.getTitle() + "] ---\n" + tab.asDocumentTab().getBody().getText() + "\n\n"; } catch (err) {}
+           return true; // หยุดค้นหาทันที
         }
         var childTabs = tab.getChildTabs();
-        if (childTabs && childTabs.length > 0) extractTextFromTabs(childTabs); 
+        if (childTabs && childTabs.length > 0) {
+           if (findAndExtractTab(childTabs)) return true;
+        }
       }
+      return false;
     }
-    extractTextFromTabs(allTabs); 
-    try { cache.put("HR_DOC_V5", fullText, 21600); } catch(e) {}
-    return fullText;
-  } catch (e) { return ""; }
+
+    findAndExtractTab(allTabs); 
+    
+    // บันทึกลงหน่วยความจำระยะสั้นของ Apps Script (1 ชั่วโมง)
+    if (extractedText !== "") {
+      try { cache.put(cacheKey, extractedText, 3600); } catch(e) {}
+    }
+    
+    return extractedText;
+  } catch (e) { 
+    return "Error reading document: " + e.toString(); 
+  }
 }
 
 function readGoogleTxtContent() {

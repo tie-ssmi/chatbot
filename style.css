@@ -262,3 +262,84 @@ body {
 .chat-img:hover { 
     opacity: 0.85; 
 }
+
+/* 🌟 CSS สำหรับปุ่มเลือก AI สไตล์ Gemini */
+.model-selector-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+#model-toggle-btn {
+    background: #eef5f8;
+    color: var(--primary-color);
+    border: none;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-family: 'Noto Sans Lao', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: 0.2s;
+    height: 44px; /* ให้สูงเท่าปุ่มอื่นๆ */
+}
+
+#model-toggle-btn:hover { background: #dceaf1; }
+
+.model-popup {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 15px); /* ให้เมนูเด้งขึ้นด้านบน */
+    right: 0;
+    width: 280px;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(15, 47, 64, 0.2);
+    border: 1px solid var(--border-color);
+    padding: 8px;
+    z-index: 1000;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.model-popup.show {
+    display: flex;
+    animation: popUp 0.2s ease-out forwards;
+}
+
+@keyframes popUp {
+    from { opacity: 0; transform: translateY(10px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.model-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.model-item:hover { background: #f4f8fb; }
+.model-item.active { background: #eef5f8; }
+
+.model-text { display: flex; flex-direction: column; }
+.model-title { font-weight: 600; color: var(--text-color); font-size: 0.95rem; }
+.model-desc { font-size: 0.75rem; color: var(--muted-text); margin-top: 2px;}
+
+.check-icon {
+    width: 20px;
+    height: 20px;
+    color: var(--primary-color);
+    opacity: 0; /* ซ่อนเครื่องหมายถูกไว้ก่อน */
+    transition: 0.2s;
+}
+
+.model-item.active .check-icon {
+    opacity: 1; /* โชว์เครื่องหมายถูกเฉพาะอันที่เลือก */
+}
