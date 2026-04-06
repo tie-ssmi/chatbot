@@ -1,5 +1,17 @@
 var GEMINI_API_KEYS = [
-  "AIzaSyD-EXAMPLE-KEY-1",
+  "AIzaSyAw5pY18otDX98Zj5d9QFWBGCUjLLhS02I",
+  "AIzaSyDaWNv1YoKfZNxV0cMTKp_JmQFVKpzFn5M",
+  "AIzaSyBjcIdyDKp8UC33OVjImYbIb2jrJX-zSLc",
+  "AIzaSyD0jW7EyZco6iRrnLOX5bi15Ji6edf4DPk",
+  "AIzaSyAcuP3BIF5oKfJGtn7FmOuNlUel0po16GE",  
+  "AIzaSyASzdzrmN3xqhGwM87X0WqsHZ5enCFuBC0", 
+  "AIzaSyAW9V1C6bjXgE2EzTpwrr15a4eyYLdW6WE",  
+  "AIzaSyBMDQSoAps9l_tW74w0NidFneXft78h1gQ",
+  "AIzaSyCiReSFLydaJytmtVr-OxSko2CrsVw6PuU",
+  "AIzaSyCsQWiLyQlQBbApf-KVmH1tj7FSDs-hatY",
+  "AIzaSyA4cYCKylAkOL1P-KRuA4N34fzoO9HOJEE",
+  "AIzaSyCUdXTmWxDtVdg6cyG2j3MlgZTl0VZr9eQ",
+  "AIzaSyAZTZjpgmVNDdL0QJHb8vqt0K93x_TAsRY"
 ];
 var GOOGLE_DOC_ID = "1cObuEeUbwHTpA05WoHQVymlDMVr-ZR0KVzLjSsWkvC0";
 var GOOGLE_TXT_ID = "1tx6FwdLdDi9Lzl-Ghk780X58XbGm7VLg00"; 
@@ -54,7 +66,42 @@ Your most important rules are:
 5. CRITICAL: If the user uploads an image (such as a receipt, form, or document), you MUST act as an expert document scanner (OCR). Carefully read and extract ALL visible text, tables, numbers, and details within the image. Then, use that extracted information to match with the HR regulations to answer the user's question accurately.`;
       
       // 3.4 Assemble Final Prompt
-      var finalPrompt = "Context ຂໍ້ມູນລະບຽບການທັງໝົດ: \n" + knowledgeContext + "\n\n";
+      // 1. ดึงชื่อ Cache ออกมาจาก Properties
+      var cachedContentName = PropertiesService.getScriptProperties().getProperty("GEMINI_CACHE_NAME");
+      
+      // 2. จัด Prompt ใหม่ (ไม่ต้องเอา knowledgeContext มารวมแล้ว)
+      var finalPrompt = "";
+      if (historyContext !== "") {
+         finalPrompt += historyContext;
+      }
+      finalPrompt += "ຄຳຖາມປັດຈຸບັນຈາກພະນັກງານ: " + userMessage;
+
+      if (requestData.imageBase64 && requestData.imageMimeType) {
+         finalPrompt += "\n\n[System Note: ພະນັກງານໄດ້ແນບຮູບພາບເອກະສານມາພ້ອມ. ຈົ່ງອ່ານຂໍ້ຄວາມ ແລະ ຕົວເລກທັງໝົດໃນຮູບພາບຢ່າງລະອຽດ, ແລ້ວນຳມາປຽບທຽບກັບລະບຽບການເພື່ອຕອບຄຳຖາມ.]";
+      }
+
+      var partsArray = [{ "text": finalPrompt }];
+      // (ส่วนโค้ดเพิ่มรูปภาพ inlineData คงไว้เหมือนเดิม)
+
+      // 3. ประกอบ Payload ใหม่ โดยเพิ่ม "cachedContent" เข้าไป
+      var payload = {
+        "systemInstruction": {
+          "parts": [{ "text": systemPrompt }]
+        },
+        "contents": [{
+          "role": "user",
+          "parts": partsArray 
+        }],
+        "generationConfig": {
+          "temperature": 0.2, 
+          "maxOutputTokens": 8000 
+        }
+      };
+
+      // ถ้าระบบจำ Cache ไว้ ให้แนบอ้างอิงไปด้วย
+      if (cachedContentName) {
+         payload.cachedContent = cachedContentName;
+      }
 
       if (historyContext !== "") {
          finalPrompt += historyContext;
@@ -371,4 +418,59 @@ function saveImageToDrive(base64, mimeType, userId) {
 // 🌟 ฟังก์ชันตัวล่อเวอร์ชันใหม่ (บังคับขอสิทธิ์สร้างไฟล์)
 function authorizeDrive() {
   DriveApp.createFile("test_permission.txt", "ทดสอบขอสิทธิ์"); 
+}
+
+// ฟังก์ชันสำหรับสร้าง Cache ก้อนใหญ่ฝากไว้ที่เซิร์ฟเวอร์ Gemini
+function createGeminiContextCache() {
+  var knowledgeText = getKnowledgeContext(); // ดึงข้อความทั้งหมดจากฟังก์ชันเดิมของคุณ
+  var url = "https://generativelanguage.googleapis.com/v1beta/cachedContents?key=" + GEMINI_API_KEYS[0];
+  
+  var payload = {
+    "model": "models/gemini-2.5-flash" + GEMINI_MODEL, // เช่น models/gemini-2.5-flash
+    "contents": [{
+      "role": "user",
+      "parts": [{ "text": knowledgeText }]
+    }],
+    // ตั้งอายุ Cache (เช่น 24 ชั่วโมง = 86400 วินาที)
+    "ttl": "86400s" 
+  };
+  
+  var options = {
+    "method": "post",
+    "contentType": "application/json",
+    "payload": JSON.stringify(payload),
+    "muteHttpExceptions": true
+  };
+  
+  var response = UrlFetchApp.fetch(url, options);
+  var result = JSON.parse(response.getContentText());
+  
+  if (result.name) {
+    // สำคัญ: บันทึกชื่อ Cache (เช่น cachedContents/123xxx) ไว้ใช้ใน doPost
+    PropertiesService.getScriptProperties().setProperty("GEMINI_CACHE_NAME", result.name);
+    Logger.log("สร้าง Cache สำเร็จ! ชื่อ: " + result.name);
+  } else {
+    Logger.log("เกิดข้อผิดพลาด: " + response.getContentText());
+  }
+}
+// ฟังก์ชันสำหรับยืดอายุ Cache
+function extendGeminiCacheLife() {
+  var cacheName = PropertiesService.getScriptProperties().getProperty("GEMINI_CACHE_NAME");
+  if (!cacheName) return;
+  
+  var url = "https://generativelanguage.googleapis.com/v1beta/" + cacheName + "?key=" + GEMINI_API_KEYS[0];
+  
+  var payload = {
+    "ttl": "86400s" // ยืดออกไปอีก 24 ชั่วโมง
+  };
+  
+  var options = {
+    "method": "patch",
+    "contentType": "application/json",
+    "payload": JSON.stringify(payload),
+    "muteHttpExceptions": true
+  };
+  
+  UrlFetchApp.fetch(url, options);
+  Logger.log("ต่ออายุ Cache: " + cacheName + " เรียบร้อย");
 }
