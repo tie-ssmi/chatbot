@@ -98,19 +98,33 @@ async function loadChatHistory(isLoadMore = false) {
             });
 
             // 🌟 นำไปแทรกต่อจากปุ่ม Load More 
+            // 🌟 นำไปแทรกต่อจากปุ่ม Load More 
             if (loadMoreContainer) {
                 loadMoreContainer.parentNode.insertBefore(chunkContainer, loadMoreContainer.nextSibling);
             } else {
                 chatMessages.insertBefore(chunkContainer, chatMessages.firstChild);
             }
 
-            if (isLoadMore) {
-                // เลื่อนหน้าจอชดเชยให้ไม่เด้งไปบนสุด
-                chatMessages.scrollTop = chatMessages.scrollHeight - oldScrollHeight;
-            } else {
-                // ถ้าโหลดครั้งแรกตอนเปิดเว็บ ให้เลื่อนลงไปอ่านแชทล่างสุด
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }
+            // 🌟 แก้ไข: บังคับให้รอโหลดเสร็จแล้วดึงหน้าจอลงล่างสุด 🌟
+            setTimeout(() => {
+                if (isLoadMore) {
+                    // รักษาระดับสายตาเดิมตอนกดโหลดเพิ่ม
+                    chatMessages.scrollTop = chatMessages.scrollHeight - oldScrollHeight;
+                } else {
+                    // ถ้าเปิดเว็บครั้งแรก ให้เลื่อนลงไปล่างสุด (ข้อความล่าสุด)
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
+            }, 100);
+
+            // ดักจับกรณีมี "รูปภาพ" โหลดช้า เพื่อดึงหน้าจอลงล่างสุดอีกรอบเมื่อรูปมาครบ
+            setTimeout(() => {
+                const images = chatMessages.querySelectorAll('img.chat-img');
+                images.forEach(img => {
+                    img.onload = () => {
+                        if (!isLoadMore) chatMessages.scrollTop = chatMessages.scrollHeight;
+                    };
+                });
+            }, 150);
             
             historyOffset += data.history.length;
         }
