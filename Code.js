@@ -41,11 +41,17 @@ function doPost(e) {
       var userName = requestData.userName || "ພະນັກງານ";
       var clientHistory = normalizeClientHistory(requestData.history);
 
-      // 3.1 Fetch shared context
-      var knowledgeContext = getKnowledgeContext();
-
-      if (!knowledgeContext) {
-        return createJsonResponse({ error: "ບໍ່ສາມາດອ່ານຂໍ້ມູນຈາກລະບົບເອກະສານໄດ້ (ໄຟລ໌ອາດຈະໃຫຍ່ເກີນໄປ ຫຼື ບໍ່ພົບໄຟລ໌)" });
+      
+      // 🌟 3.1 ตรวจสอบว่ามี Cache อยู่หรือไม่
+      var cachedContentName = PropertiesService.getScriptProperties().getProperty("GEMINI_CACHE_NAME");
+      var knowledgeContext = "";
+      
+      // ถ้าไม่มี Cache ให้ดึงข้อมูลแบบ Manual เหมือนเดิม
+      if (!cachedContentName) {
+         knowledgeContext = getKnowledgeContext();
+         if (!knowledgeContext) {
+           return createJsonResponse({ error: "ບໍ່ສາມາດອ່ານຂໍ້ມູນຈາກລະບົບເອກະສານໄດ້ (ໄຟລ໌ອາດຈະໃຫຍ່ເກີນໄປ ຫຼື ບໍ່ພົບໄຟລ໌)" });
+         }
       }
 
       // 3.2 Prefer lightweight client-side history
@@ -53,54 +59,32 @@ function doPost(e) {
       if (!historyContext) {
         historyContext = getRecentHistoryText(userId);
       }
+    
+      // 3.3 Define AI Role (อัปเดตใหม่ เพิ่มเงื่อนไขการพูดคุยทั่วไป)
+      var systemPrompt = `You are an AI HR assistant for the organization SSMI (Sinsap Muang Neua). Your name is "ນ້ອງໄຂ່" (Nong Khai). You are currently speaking with an employee named: ${userName}.
+Your main responsibility is to answer employee questions regarding regulations, policies, benefits, and the organizational structure based on the provided context.
 
-      // 3.3 Define AI Role 
-      var systemPrompt = `You are an AI HR assistant for the organization SSMI (Sinsap Muang Neua). You are currently speaking with an employee named: ${userName}.
-Your main responsibility is to answer employee questions regarding regulations, policies, benefits, and the organizational structure.
+Your strict rules:
+1. HR Questions: You must answer HR questions based ONLY on the information provided in the context.
+2. Missing Info: If an HR question cannot be answered using the provided context, respond politely with: "ຂໍອະໄພ, ນ້ອງໄຂ່ບໍ່ມີຂໍ້ມູນໃນສ່ວນນີ້. ກະລຸນາຕິດຕໍ່ພະແນກ HR ເພື່ອສອບຖາມເພີ່ມເຕີມເດີ້."
+3. No Hallucination: You must not generate or assume any organizational information.
+4. Language: You must respond in clear, polite, friendly, and professional Lao language.
 
-Your most important rules are:
-1. You must answer questions based only on the information provided in the given context.
-2. If a question cannot be answered using the provided context, respond with: "Sorry, I do not have information on this topic. Please contact the HR department for further assistance."
-3. You must not generate or assume any information (No hallucination under any circumstances).
-4. You must respond in clear, polite, and professional Lao language.
-5. CRITICAL: If the user uploads an image (such as a receipt, form, or document), you MUST act as an expert document scanner (OCR). Carefully read and extract ALL visible text, tables, numbers, and details within the image. Then, use that extracted information to match with the HR regulations to answer the user's question accurately.`;
+--- CONVERSATIONAL HANDLING RULES ---
+5. Greetings: If the user simply greets you (e.g., ສະບາຍດີ, Hi, Hello), do NOT say you don't have info. Instead, greet them back naturally as Nong Khai and ask how you can help them today.
+6. Compliments/Thanks: If the user thanks you, praises you, or says general positive things (e.g., ຂອບໃຈ, ເກັ່ງຫຼາຍ, ຢ້ຽມ, ດີຫຼາຍ), politely accept the compliment or say "You're welcome" naturally.
+7. Small Talk/Well-being: If the user asks how you are doing (e.g., ເປັນຈັ່ງໃດ, ສະບາຍດີບໍ່), respond that you are doing well and ready to assist them.
+
+CRITICAL: Carefully distinguish between small talk and actual work questions. For example, if the user asks "ລະບຽບມັນເປັນຈັ່ງໃດ" (How is the regulation?), you MUST treat it as an HR question (Rule 1 & 2), NOT as small talk (Rule 7).
+
+8. Image Processing: If the user uploads an image, act as an expert document scanner (OCR). Extract ALL visible text and use it to answer their question accurately.`;
       
       // 3.4 Assemble Final Prompt
-      // 1. ดึงชื่อ Cache ออกมาจาก Properties
-      var cachedContentName = PropertiesService.getScriptProperties().getProperty("GEMINI_CACHE_NAME");
-      
-      // 2. จัด Prompt ใหม่ (ไม่ต้องเอา knowledgeContext มารวมแล้ว)
       var finalPrompt = "";
-      if (historyContext !== "") {
-         finalPrompt += historyContext;
-      }
-      finalPrompt += "ຄຳຖາມປັດຈຸບັນຈາກພະນັກງານ: " + userMessage;
-
-      if (requestData.imageBase64 && requestData.imageMimeType) {
-         finalPrompt += "\n\n[System Note: ພະນັກງານໄດ້ແນບຮູບພາບເອກະສານມາພ້ອມ. ຈົ່ງອ່ານຂໍ້ຄວາມ ແລະ ຕົວເລກທັງໝົດໃນຮູບພາບຢ່າງລະອຽດ, ແລ້ວນຳມາປຽບທຽບກັບລະບຽບການເພື່ອຕອບຄຳຖາມ.]";
-      }
-
-      var partsArray = [{ "text": finalPrompt }];
-      // (ส่วนโค้ดเพิ่มรูปภาพ inlineData คงไว้เหมือนเดิม)
-
-      // 3. ประกอบ Payload ใหม่ โดยเพิ่ม "cachedContent" เข้าไป
-      var payload = {
-        "systemInstruction": {
-          "parts": [{ "text": systemPrompt }]
-        },
-        "contents": [{
-          "role": "user",
-          "parts": partsArray 
-        }],
-        "generationConfig": {
-          "temperature": 0.2, 
-          "maxOutputTokens": 8000 
-        }
-      };
-
-      // ถ้าระบบจำ Cache ไว้ ให้แนบอ้างอิงไปด้วย
-      if (cachedContentName) {
-         payload.cachedContent = cachedContentName;
+      
+      // 🌟 ถ้าไม่มี Cache ถึงจะแนบข้อความยาวๆ ไปด้วย
+      if (!cachedContentName) {
+         finalPrompt += "Context ຂໍ້ມູນລະບຽບການທັງໝົດ: \n" + knowledgeContext + "\n\n";
       }
 
       if (historyContext !== "") {
@@ -123,12 +107,13 @@ Your most important rules are:
         });
       }
 
-      // 🌟 ย้ายระบบเซฟรูปลง Drive มาไว้ตรงนี้ (ให้เซฟทันที ไม่ต้องรอ AI)
+      // เซฟรูปลง Drive
       var imageUrl = "";
       if (requestData.imageBase64 && requestData.imageMimeType) {
         imageUrl = saveImageToDrive(requestData.imageBase64, requestData.imageMimeType, userId);
       }
 
+      // 🌟 3.5 ประกอบ Payload ส่งหา Gemini
       var payload = {
         "contents": [{
           "role": "user",
@@ -143,6 +128,11 @@ Your most important rules are:
         }
       };
 
+      // 🌟 ถ้ามี Cache ให้แนบชื่อ Cache ไปด้วย (ประหยัด Token ทันที)
+      if (cachedContentName) {
+         payload.cachedContent = cachedContentName;
+      }
+
       var options = {
         "method": "post",
         "contentType": "application/json",
@@ -153,19 +143,17 @@ Your most important rules are:
       var aiReply = null;
       var lastError = "";
 
-      var shuffledKeys = GEMINI_API_KEYS.slice().sort(function() { return 0.5 - Math.random() });
+      // 🌟 ถ้าใช้ Cache บังคับใช้ Key หลัก (Index 0) เพื่อไม่ให้หา Cache ไม่เจอ
+      var activeApiKey = cachedContentName ? GEMINI_API_KEYS[0] : GEMINI_API_KEYS[Math.floor(Math.random() * GEMINI_API_KEYS.length)];
 
-      for (var i = 0; i < shuffledKeys.length; i++) {
-        var url = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent?key=" + shuffledKeys[i];
-        var response = UrlFetchApp.fetch(url, options);
-        var responseData = JSON.parse(response.getContentText());
+      var url = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent?key=" + activeApiKey;
+      var response = UrlFetchApp.fetch(url, options);
+      var responseData = JSON.parse(response.getContentText());
 
-        if (responseData.candidates && responseData.candidates.length > 0) {
-          aiReply = responseData.candidates[0].content.parts[0].text;
-          break; 
-        } else {
-          lastError = JSON.stringify(responseData);
-        }
+      if (responseData.candidates && responseData.candidates.length > 0) {
+        aiReply = responseData.candidates[0].content.parts[0].text;
+      } else {
+        lastError = JSON.stringify(responseData);
       }
 
       // 3.6 Log and Return
@@ -174,7 +162,7 @@ Your most important rules are:
         return createJsonResponse({ reply: aiReply });
       } else {
         logToSheet(userId, userName, userMessage, lastError, "Error", imageUrl);
-        return createJsonResponse({ error: "AI ບໍ່ສາມາດສ້າງຄຳຕອບໄດ້ໃນຕອນນີ້. (API ອາດຈະຕິດລິມິດ)" });
+        return createJsonResponse({ error: "AI ບໍ່ສາມາດສ້າງຄຳຕອບໄດ້ໃນຕອນນີ້. (API ອາດຈະຕິດລິມິດ) ຂໍ້ມູນ: " + lastError.substring(0, 50) });
       }
     }
   } catch (err) {
@@ -183,7 +171,85 @@ Your most important rules are:
 }
 
 // ==========================================
-// 2. Login Check
+// 🌟 2. ระบบจัดการ Gemini Context Cache (ฟังก์ชันใหม่)
+// ==========================================
+
+// 2.1 รันฟังก์ชันนี้ "ด้วยตัวเอง 1 ครั้ง" เพื่อสร้าง Cache
+function setupGeminiCache() {
+  var knowledgeText = getKnowledgeContext(); 
+  if (!knowledgeText) {
+    Logger.log("ไม่สามารถอ่านข้อมูลจาก Docs/Txt ได้ กรุณาตรวจสอบ ID");
+    return;
+  }
+
+  var url = "https://generativelanguage.googleapis.com/v1beta/cachedContents?key=" + GEMINI_API_KEYS[0];
+  
+  var payload = {
+    "model": "models/" + GEMINI_MODEL,
+    "contents": [{
+      "role": "user",
+      "parts": [{ "text": "Context ຂໍ້ມູນລະບຽບການທັງໝົດ: \n" + knowledgeText }]
+    }],
+    "ttl": "86400s" // เก็บไว้ 24 ชั่วโมง
+  };
+  
+  var options = {
+    "method": "post",
+    "contentType": "application/json",
+    "payload": JSON.stringify(payload),
+    "muteHttpExceptions": true
+  };
+  
+  var response = UrlFetchApp.fetch(url, options);
+  var result = JSON.parse(response.getContentText());
+  
+  if (result.name) {
+    PropertiesService.getScriptProperties().setProperty("GEMINI_CACHE_NAME", result.name);
+    Logger.log("✅ สร้าง Cache สำเร็จ! ชื่อ: " + result.name);
+  } else {
+    Logger.log("❌ เกิดข้อผิดพลาดในการสร้าง Cache: " + response.getContentText());
+  }
+}
+
+// 2.2 ตั้ง Trigger ให้รันฟังก์ชันนี้ "ทุกๆ 12 ชั่วโมง" เพื่อต่ออายุ Cache
+function extendGeminiCacheLife() {
+  var cacheName = PropertiesService.getScriptProperties().getProperty("GEMINI_CACHE_NAME");
+  if (!cacheName) {
+    Logger.log("ไม่พบ Cache Name ในระบบ อาจจะต้องรัน setupGeminiCache() ใหม่");
+    return;
+  }
+  
+  var url = "https://generativelanguage.googleapis.com/v1beta/" + cacheName + "?key=" + GEMINI_API_KEYS[0];
+  var payload = { "ttl": "86400s" }; // ยืดออกไป 24 ชั่วโมง
+  var options = {
+    "method": "patch",
+    "contentType": "application/json",
+    "payload": JSON.stringify(payload),
+    "muteHttpExceptions": true
+  };
+  
+  var response = UrlFetchApp.fetch(url, options);
+  if (response.getResponseCode() === 200) {
+    Logger.log("✅ ต่ออายุ Cache เรียบร้อย: " + cacheName);
+  } else {
+    Logger.log("❌ ต่ออายุไม่สำเร็จ (Cache อาจหมดอายุไปแล้ว): " + response.getContentText());
+    // ถ้าต่ออายุไม่สำเร็จ ให้สร้างใหม่เลย
+    setupGeminiCache();
+  }
+}
+
+// 2.3 ฟังก์ชันเอาไว้เคลียร์/ลบ Cache ทิ้ง (เผื่อแก้ไขเอกสาร)
+function deleteGeminiCache() {
+  var cacheName = PropertiesService.getScriptProperties().getProperty("GEMINI_CACHE_NAME");
+  if (!cacheName) return;
+  var url = "https://generativelanguage.googleapis.com/v1beta/" + cacheName + "?key=" + GEMINI_API_KEYS[0];
+  UrlFetchApp.fetch(url, { "method": "delete", "muteHttpExceptions": true });
+  PropertiesService.getScriptProperties().deleteProperty("GEMINI_CACHE_NAME");
+  Logger.log("🗑️ ลบ Cache ทิ้งเรียบร้อยแล้ว");
+}
+
+// ==========================================
+// 3. Login Check
 // ==========================================
 function handleLogin(username, password) {
   try {
@@ -203,7 +269,7 @@ function handleLogin(username, password) {
 }
 
 // ==========================================
-// 3. Log History to Sheets
+// 4. Log History to Sheets
 // ==========================================
 function logToSheet(userId, userName, question, answer, status, imageUrl) { 
   try {
@@ -215,7 +281,7 @@ function logToSheet(userId, userName, question, answer, status, imageUrl) {
 }
 
 // ==========================================
-// 4. Read Google Docs
+// 5. Read Google Docs
 // ==========================================
 function readGoogleDocContent() {
   var cache = CacheService.getScriptCache();
@@ -250,7 +316,7 @@ function readGoogleDocContent() {
 }
 
 // ==========================================
-// 5. Read Text File from Drive
+// 6. Read Text File from Drive
 // ==========================================
 function readGoogleTxtContent() {
   var cache = CacheService.getScriptCache();
@@ -270,7 +336,7 @@ function readGoogleTxtContent() {
 }
 
 // ==========================================
-// 6. Utility Functions (History & JSON)
+// 7. Utility Functions (History & JSON)
 // ==========================================
 function getChatHistory(userId) {
   try {
@@ -317,7 +383,7 @@ function createJsonResponse(dataObject) {
 }
 
 // ==========================================
-// 7. Combine Knowledge Context (Docs + Txt Only)
+// 8. Combine Knowledge Context (Docs + Txt Only)
 // ==========================================
 function getKnowledgeContext() {
   var cache = CacheService.getScriptCache();
@@ -407,70 +473,12 @@ function saveImageToDrive(base64, mimeType, userId) {
     
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     
-    
     return "https://drive.google.com/thumbnail?id=" + file.getId() + "&sz=w800";
   } catch (e) {
-    // 🌟 คาย Error ออกมาให้รู้กันไปเลยว่าพังเพราะอะไร!
     return "ERROR_SAVE_IMAGE: " + e.toString();
   }
 }
 
-// 🌟 ฟังก์ชันตัวล่อเวอร์ชันใหม่ (บังคับขอสิทธิ์สร้างไฟล์)
 function authorizeDrive() {
   DriveApp.createFile("test_permission.txt", "ทดสอบขอสิทธิ์"); 
-}
-
-// ฟังก์ชันสำหรับสร้าง Cache ก้อนใหญ่ฝากไว้ที่เซิร์ฟเวอร์ Gemini
-function createGeminiContextCache() {
-  var knowledgeText = getKnowledgeContext(); // ดึงข้อความทั้งหมดจากฟังก์ชันเดิมของคุณ
-  var url = "https://generativelanguage.googleapis.com/v1beta/cachedContents?key=" + GEMINI_API_KEYS[0];
-  
-  var payload = {
-    "model": "models/gemini-2.5-flash" + GEMINI_MODEL, // เช่น models/gemini-2.5-flash
-    "contents": [{
-      "role": "user",
-      "parts": [{ "text": knowledgeText }]
-    }],
-    // ตั้งอายุ Cache (เช่น 24 ชั่วโมง = 86400 วินาที)
-    "ttl": "86400s" 
-  };
-  
-  var options = {
-    "method": "post",
-    "contentType": "application/json",
-    "payload": JSON.stringify(payload),
-    "muteHttpExceptions": true
-  };
-  
-  var response = UrlFetchApp.fetch(url, options);
-  var result = JSON.parse(response.getContentText());
-  
-  if (result.name) {
-    // สำคัญ: บันทึกชื่อ Cache (เช่น cachedContents/123xxx) ไว้ใช้ใน doPost
-    PropertiesService.getScriptProperties().setProperty("GEMINI_CACHE_NAME", result.name);
-    Logger.log("สร้าง Cache สำเร็จ! ชื่อ: " + result.name);
-  } else {
-    Logger.log("เกิดข้อผิดพลาด: " + response.getContentText());
-  }
-}
-// ฟังก์ชันสำหรับยืดอายุ Cache
-function extendGeminiCacheLife() {
-  var cacheName = PropertiesService.getScriptProperties().getProperty("GEMINI_CACHE_NAME");
-  if (!cacheName) return;
-  
-  var url = "https://generativelanguage.googleapis.com/v1beta/" + cacheName + "?key=" + GEMINI_API_KEYS[0];
-  
-  var payload = {
-    "ttl": "86400s" // ยืดออกไปอีก 24 ชั่วโมง
-  };
-  
-  var options = {
-    "method": "patch",
-    "contentType": "application/json",
-    "payload": JSON.stringify(payload),
-    "muteHttpExceptions": true
-  };
-  
-  UrlFetchApp.fetch(url, options);
-  Logger.log("ต่ออายุ Cache: " + cacheName + " เรียบร้อย");
 }
