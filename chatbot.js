@@ -1,31 +1,20 @@
-// --- chatbot.js ---
-
 const chatMessages = document.getElementById('chat-messages');
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
 const micBtn = document.getElementById('mic-btn');
 const autoSpeakToggle = document.getElementById('auto-speak');
 
-
 // ==========================================
 // 1. ระบบจัดการ Session & History
 // ==========================================
-
-// ตรวจสอบตอนเปิดหน้าเว็บ
 window.onload = function() {
     if (!localStorage.getItem('ssmi_user_id')) {
-        // ถ้ายังไม่ได้ Login ให้เตะไปหน้า login.html (กรณีแยกไฟล์)
-        if (!window.location.href.includes('login.html')) {
-            window.location.href = 'login.html';
-        }
+        if (!window.location.href.includes('login.html')) window.location.href = 'login.html';
     } else {
-        // ถ้า Login แล้ว ให้แสดงหน้าแชท และโหลดประวัติเก่า
         if (document.getElementById('chat-app')) showChat();
         loadChatHistory();
         const userName = localStorage.getItem('ssmi_user_name');
-        if (userName) {
-            document.getElementById('user-display-name').innerText = '👤 ' + userName;
-        }
+        if (userName) document.getElementById('user-display-name').innerText = '👤 ' + userName;
     }
 };
 
@@ -42,11 +31,9 @@ function showChat() {
     if (chatApp) chatApp.style.display = 'flex';
 }
 
-// ฟังก์ชันดึงประวัติจาก Google Sheets มาแสดง
 async function loadChatHistory() {
     const userId = localStorage.getItem('ssmi_user_id');
     if (!userId) return;
-
     try {
         const response = await fetch(CHATBOT_CONFIG.API_URL, {
             method: 'POST',
@@ -62,12 +49,10 @@ async function loadChatHistory() {
                 } else {
                     appendMessage(item.question, 'user-message');
                 }
-                
                 if (!item.answer.includes("API Error")) {
-                    // 🌟 เพิ่มการแปลง \n เป็น <br> และแปลง **ข้อความ** เป็นตัวหนา
                     let formattedAnswer = item.answer.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
                     appendMessage(formattedAnswer, 'bot-message', null, true);
-                }  else {
+                } else {
                     appendMessage("⚠️ ຂໍອະໄພ, ຂໍ້ຄວາມນີ້ເກີດຂໍ້ຜິດພາດ", 'bot-message');
                 }
             });
@@ -76,59 +61,64 @@ async function loadChatHistory() {
 }
 
 // ==========================================
-// 2. โลจิกการส่งข้อความ (ตัวที่สมบูรณ์)
+// 2. โลจิกการส่งข้อความและจัดการไฟล์
 // ==========================================
 let currentChatHistory = [];
-// 🌟 ระบบจัดการรูปภาพ
-let currentImageBase64 = null;
-let currentImageMimeType = null;
+let currentFiles = []; 
 
-function handleImageSelection(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+function handleFileSelection(event) {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        // แยกเอาเฉพาะข้อมูล Base64 ทิ้งส่วน Header ไป
-        currentImageBase64 = e.target.result.split(',')[1];
-        currentImageMimeType = file.type;
-
-        document.getElementById('image-preview').src = e.target.result;
-        document.getElementById('image-preview-container').style.display = 'flex';
-    };
-    reader.readAsDataURL(file);
+    const previewContainer = document.getElementById('file-preview-container');
+    const tagsContainer = document.getElementById('file-tags');
+    
+    for (let file of files) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const base64Data = e.target.result.split(',')[1];
+            currentFiles.push({
+                base64: base64Data,
+                mimeType: file.type,
+                name: file.name
+            });
+            
+            const fileTag = document.createElement('span');
+            fileTag.style.cssText = "background: #eef5f8; color: #176b8a; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; border: 1px solid #c8dae2;";
+            const icon = file.type.includes('pdf') ? '📄' : '🖼️';
+            fileTag.innerText = `${icon} ${file.name.substring(0, 15)}...`;
+            tagsContainer.appendChild(fileTag);
+            previewContainer.style.display = 'flex';
+        };
+        reader.readAsDataURL(file);
+    }
 }
 
-function clearImage() {
-    currentImageBase64 = null;
-    currentImageMimeType = null;
-    document.getElementById('image-upload').value = '';
-    document.getElementById('image-preview-container').style.display = 'none';
+function clearFiles() {
+    currentFiles = [];
+    document.getElementById('file-upload').value = '';
+    document.getElementById('file-preview-container').style.display = 'none';
+    document.getElementById('file-tags').innerHTML = '';
 }
+
 async function sendMessage() {
-    // 🌟 ดึงทั้งข้อความและรูปภาพ (อนุญาตให้ส่งแต่รูปเปล่าๆ ได้ด้วย)
     const text = userInput.value.trim();
-    if (!text && !currentImageBase64) return;
+    if (!text && currentFiles.length === 0) return;
 
-    // 🌟 จัดรูปแบบข้อความฝั่ง User ให้โชว์รูปในแชทด้วย
     let userDisplayHtml = text;
-    if (currentImageBase64) {
-       userDisplayHtml = `<img src="data:${currentImageMimeType};base64,${currentImageBase64}" class="chat-img" onclick="openModal(this.src)" style="max-width: 100%; max-height: 200px; border-radius: 8px; margin-bottom: 5px;"><br>` + text;
+    if (currentFiles.length > 0) {
+       userDisplayHtml = `<div style="color: #0f4f67; font-size: 0.8rem; margin-bottom: 5px;">📎 ແນບເອກະສານແລ້ວ ${currentFiles.length} ສະບັບ</div>` + text;
     }
 
-    // 🌟 ใส่ parameter 'true' ด้านหลังสุด เพื่อให้มันเรนเดอร์แท็ก <img> ได้
     appendMessage(userDisplayHtml, 'user-message', null, true); 
-    
     userInput.value = '';
     toggleInput(false);
 
     const userId = localStorage.getItem('ssmi_user_id') || "Unknown";
     const userName = localStorage.getItem('ssmi_user_name') || "ພະນັກງານ";
 
-    // 🌟 เก็บข้อมูลรูปลงตัวแปรก่อน แล้วค่อยล้างกล่องรูป
-    const payloadImageBase64 = currentImageBase64;
-    const payloadImageMimeType = currentImageMimeType;
-    clearImage(); // ล้างกล่อง Preview
+    const payloadFiles = [...currentFiles];
+    clearFiles(); 
 
     const loadingId = 'loading-' + Date.now();
     appendMessage('<div class="typing-indicator"><span></span><span></span><span></span></div>', 'bot-message', loadingId, true);
@@ -138,13 +128,11 @@ async function sendMessage() {
             method: 'POST',
             body: JSON.stringify({ 
                 action: 'chat', 
-                message: text || "ກວດເບິ່ງຮູບນີ້ໃຫ້ແດ່", // ถ้าไม่พิมพ์อะไรเลย ให้ส่งคำสั่งพื้นฐานไป
+                message: text || "ກວດເບິ່ງເອກະສານເຫຼົ່ານີ້ໃຫ້ແດ່", 
                 userId: userId,
                 userName: userName,
                 history: currentChatHistory,
-                // 🌟 แนบรูปภาพไปให้ Apps Script
-                imageBase64: payloadImageBase64,
-                imageMimeType: payloadImageMimeType
+                files: payloadFiles
             }),
             headers: { 'Content-Type': 'text/plain;charset=utf-8' }
         });
@@ -157,16 +145,11 @@ async function sendMessage() {
             appendMessage(formattedReply, 'bot-message', null, true);
             currentChatHistory.push({ role: 'user', message: text });
             currentChatHistory.push({ role: 'assistant', message: data.reply });
-            if (currentChatHistory.length > 20) {
-                currentChatHistory = currentChatHistory.slice(-20);
-            }
+            if (currentChatHistory.length > 20) currentChatHistory = currentChatHistory.slice(-20);
             speakText(data.reply); 
-            
         } else if (data.error) {    
-            // แสดง Error ให้เห็นในแชทเลยจะได้ไม่งง
             appendMessage("⚠️ ຂໍອະໄພ: " + data.error, 'bot-message');
         }
-        
     } catch (error) {
         removeMessage(loadingId);
         appendMessage("🌐 ບໍ່ສາມາດເຊື່ອມຕໍ່ກັບເຊີບເວີໄດ້", 'bot-message');
@@ -178,7 +161,6 @@ async function sendMessage() {
 // ==========================================
 // 3. ระบบเสียง & UI Helpers
 // ==========================================
-
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 const supportedRecorderMimeType = (() => {
@@ -202,38 +184,16 @@ if (SpeechRecognition) {
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
-    
-    recognition.onstart = () => { 
-        isRecording = true; 
-        micBtn.classList.add('recording'); 
-    };
-    
+    recognition.onstart = () => { isRecording = true; micBtn.classList.add('recording'); };
     recognition.onresult = (event) => { 
         const transcript = event.results[0][0].transcript;
-        console.log('Speech recognition result:', transcript);
         userInput.value = transcript; 
         sendMessage(); 
     };
-
-    recognition.onnomatch = () => {
-        console.warn('Speech recognition did not match any text.');
-        alert('⚠️ ບໍ່ພົບເຄື່ອງມື ຫຼື ບໍ່ສາມາດແປງສຽງເປັນຂໍ້ຄວາມໄດ້');
-    };
-
-    recognition.onspeechend = () => {
-        if (isRecording) {
-            recognition.stop();
-        }
-    };
-    
-    recognition.onend = () => { 
-        isRecording = false; 
-        micBtn.classList.remove('recording'); 
-    };
-
-    // 🌟 เพิ่มการดักจับ Error กรณีไมค์มีปัญหา หรือโดนบล็อก
+    recognition.onnomatch = () => { alert('⚠️ ບໍ່ພົບເຄື່ອງມື ຫຼື ບໍ່ສາມາດແປງສຽງເປັນຂໍ້ຄວາມໄດ້'); };
+    recognition.onspeechend = () => { if (isRecording) recognition.stop(); };
+    recognition.onend = () => { isRecording = false; micBtn.classList.remove('recording'); };
     recognition.onerror = (event) => {
-        console.error("Speech recognition error:", event.error);
         if (event.error === 'not-allowed') {
             alert("⚠️ ລະບົບຖືກບລັອກໄມໂຄຣໂຟນ! \nກະລຸນາກົດປຸ່ມຮູບແມ່ກະແຈ (Padlock) ຢູ່ແຖບ URL ດ້ານເທິງ, ແລ້ວເລືອກອະນຸຍາດ (Allow) ໃຫ້ໄມໂຄຣໂຟນ.");
         }
@@ -242,62 +202,35 @@ if (SpeechRecognition) {
     };
 }
 
-// 🌟 อัปเกรดฟังก์ชันปุ่มไมค์ ให้บังคับขออนุญาตทุกครั้ง
 async function toggleMic() {
-    // If browser supports SpeechRecognition, prefer it. Otherwise, fall back to MediaRecorder upload.
     const hasMediaRecorder = !!(navigator.mediaDevices && window.MediaRecorder);
-    if (!recognition && !hasMediaRecorder) {
-        return alert("⚠️ Browser ຂອງທ່ານບໍ່ຮອງຮັບການບັນທຶກ/ການຈຳລອງສຽງ (ແນະນຳໃຫ້ໃຊ້ Google Chrome ຫຼື ອຸປະກອນທີ່ສະຫງວນ).");
-    }
-
-    // If SpeechRecognition is active, toggle it as before
+    if (!recognition && !hasMediaRecorder) return alert("⚠️ Browser ຂອງທ່ານບໍ່ຮອງຮັບການບັນທຶກສຽງ.");
     if (recognition) {
-        if (isRecording) {
-            recognition.stop();
-            return;
-        }
-
+        if (isRecording) { recognition.stop(); return; }
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             stream.getTracks().forEach(track => track.stop());
             recognition.start();
         } catch (err) {
-            console.error("Microphone access denied:", err);
             alert("⚠️ ບໍ່ສາມາດເປີດໄມໂຄຣໂຟນໄດ້! \nກະລຸນາກວດສອບວ່າທ່ານໄດ້ກົດອະນຸຍາດ (Allow) ແລ້ວຫຼືຍັງ.");
         }
         return;
     }
-
-    // Fallback: MediaRecorder-based recording (for iOS / browsers without Web Speech API)
     if (isRecordingFallback) {
-        // stop recording
         if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
         return;
     }
-
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        // start MediaRecorder
         recordedChunks = [];
         const recorderOptions = supportedRecorderMimeType ? { mimeType: supportedRecorderMimeType } : {};
         mediaRecorder = new MediaRecorder(stream, recorderOptions);
-        console.log('MediaRecorder mimeType:', supportedRecorderMimeType);
-
-        mediaRecorder.ondataavailable = (e) => {
-            if (e.data && e.data.size > 0) recordedChunks.push(e.data);
-        };
-
-        mediaRecorder.onstart = () => {
-            isRecordingFallback = true;
-            micBtn.classList.add('recording');
-        };
-
+        mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) recordedChunks.push(e.data); };
+        mediaRecorder.onstart = () => { isRecordingFallback = true; micBtn.classList.add('recording'); };
         mediaRecorder.onstop = async () => {
             isRecordingFallback = false;
             micBtn.classList.remove('recording');
-            // stop local tracks
             stream.getTracks().forEach(t => t.stop());
-            // upload blob to server for transcription
             const blobType = recordedChunks.length ? recordedChunks[0].type : supportedRecorderMimeType || 'audio/webm';
             const fileExtension = blobType.includes('mp4') ? 'mp4' : blobType.includes('aac') ? 'aac' : blobType.includes('webm') ? 'webm' : recorderFileExtension;
             const blob = new Blob(recordedChunks, { type: blobType });
@@ -305,49 +238,28 @@ async function toggleMic() {
                 const form = new FormData();
                 form.append('action', 'transcribeAudio');
                 form.append('file', blob, `recording.${fileExtension}`);
-                const resp = await fetch(CHATBOT_CONFIG.API_URL, {
-                    method: 'POST',
-                    body: form
-                });
+                const resp = await fetch(CHATBOT_CONFIG.API_URL, { method: 'POST', body: form });
                 const result = await resp.json();
-                if (result && result.transcript) {
-                    userInput.value = result.transcript;
-                    sendMessage();
-                } else if (result && result.error) {
-                    appendMessage('⚠️ ບໍ່ສາມາດຖືກແປງສຽງ: ' + result.error, 'bot-message');
-                } else {
-                    appendMessage('⚠️ ການແປພາສາບໍ່ສຳເລັດ', 'bot-message');
-                }
-            } catch (uploadErr) {
-                console.error('Upload/transcribe failed', uploadErr);
-                appendMessage('🌐 ບໍ່ສາມາດອັບໂຫຼດສຽງໄດ້', 'bot-message');
-            }
+                if (result && result.transcript) { userInput.value = result.transcript; sendMessage(); }
+                else if (result && result.error) appendMessage('⚠️ ' + result.error, 'bot-message');
+                else appendMessage('⚠️ ການແປພາສາບໍ່ສຳເລັດ', 'bot-message');
+            } catch (uploadErr) { appendMessage('🌐 ບໍ່ສາມາດອັບໂຫຼດສຽງໄດ້', 'bot-message'); }
         };
-
         mediaRecorder.start();
-        // optional: auto-stop after 12s to avoid very long recordings
-        setTimeout(() => {
-            if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
-        }, 12000);
-
-    } catch (err) {
-        console.error('MediaRecorder/permission error', err);
-        alert('⚠️ ບໍ່ສາມາດເປີດໄມໂຄຣໂຟນໄດ້! \nກະລຸນາກວດສອບວ່າທ່ານໄດ້ກົດອະນຸຍາດ (Allow) ແລ້ວຫຼືຍັງ.');
-    }
+        setTimeout(() => { if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop(); }, 12000);
+    } catch (err) { alert('⚠️ ບໍ່ສາມາດເປີດໄມໂຄຣໂຟນໄດ້!'); }
 }
 
+let availableVoices = [];
 function refreshVoices() {
     if (!('speechSynthesis' in window)) return;
     availableVoices = window.speechSynthesis.getVoices() || [];
 }
-
 function pickBestVoice() {
     const voices = availableVoices.length ? availableVoices : (window.speechSynthesis.getVoices() || []);
     if (!voices.length) return null;
-
     const exactLao = voices.find(v => (v.lang || '').toLowerCase() === 'lo-la');
     if (exactLao) return exactLao;
-
     const laoFamily = voices.find(v => (v.lang || '').toLowerCase().startsWith('lo'));
     return laoFamily || null;
 }
@@ -356,31 +268,19 @@ let hasWarnedNoLaoVoice = false;
 function speakText(text) {
     if (!('speechSynthesis' in window)) return;
     if (!autoSpeakToggle.checked) return;
-    window.speechSynthesis.cancel(); // หยุดเสียงเก่าก่อน
-
-    // ลบสัญลักษณ์พิเศษออกเพื่อให้ AI อ่านลื่นขึ้น
+    window.speechSynthesis.cancel(); 
     const cleanText = text.replace(/[\*\#\_]/g, "");
     const utterance = new SpeechSynthesisUtterance(cleanText);
-
     refreshVoices();
     const selectedVoice = pickBestVoice();
-
     if (selectedVoice) {
         utterance.voice = selectedVoice;
         utterance.lang = selectedVoice.lang;
-        console.log("เลือกใช้เสียง: " + selectedVoice.name);
     } else {
-        // Lao-only mode: do not fallback to Thai/English voice
-        if (!hasWarnedNoLaoVoice) {
-            hasWarnedNoLaoVoice = true;
-            console.warn('No Lao voice (lo-LA) installed in this browser. Lao-only speech is disabled until a Lao voice is installed.');
-        }
         return;
     }
-
-    utterance.rate = 0.9; // ลดความเร็วลงนิดนึงเพื่อให้ฟังภาษาลาวจากเสียงไทยได้ชัดขึ้น
+    utterance.rate = 0.9; 
     utterance.pitch = 1.0; 
-    
     window.speechSynthesis.speak(utterance);
 }
 
@@ -397,15 +297,11 @@ function appendMessage(text, className, id = null, isHtml = false) {
 
 if ('speechSynthesis' in window) {
     refreshVoices();
-    window.speechSynthesis.addEventListener('voiceschanged', () => {
-        refreshVoices();
-    });
+    window.speechSynthesis.addEventListener('voiceschanged', () => refreshVoices());
 }
 
-// 🌟 ฟังก์ชันเปิด-ปิด รูปภาพ (ซูมรูป)
 function openModal(src) {
     let fullSrc = src;
-    // ทริค: ถ้าเป็นลิงก์จาก Drive ให้แอบขยายขนาดภาพ (w800 เป็น w2000) เพื่อให้ภาพชัดขึ้นตอนซูม
     if(src.includes('thumbnail?id=') && src.includes('&sz=w800')) {
          fullSrc = src.replace('&sz=w800', '&sz=w2000'); 
     }
@@ -413,8 +309,6 @@ function openModal(src) {
     document.getElementById("modal-img").src = fullSrc;
 }
 
-function closeModal() {
-    document.getElementById("image-modal").style.display = "none";
-}
+function closeModal() { document.getElementById("image-modal").style.display = "none"; }
 function removeMessage(id) { const el = document.getElementById(id); if (el) el.remove(); }
 function toggleInput(enable) { userInput.disabled = !enable; sendBtn.disabled = !enable; if(enable) userInput.focus(); }

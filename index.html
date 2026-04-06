@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>ນ້ອງໄຂ່ | Nong Khai</title>
     <link rel="icon" href="Nrng-Khai.png" type="image/png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,50 +11,46 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
     <script>
         if (!localStorage.getItem('ssmi_user_id')) {
-            window.location.href = 'login.html'; // ຖ້າບໍ່ມີລະຫັດ ໃຫ້ເຕະກັບໄປໜ້າ Login
+            window.location.href = 'login.html';
         }
     </script>
 
     <div class="chat-container">
         <div class="chat-header">
             <div class="header-left">
-                <img src="Nrng-Khai.png" alt="SSMI Logo" class="bot-logo">
+                <img src="Nrng-Khai.png" alt="Nong Khai Logo" class="bot-logo">
                 <div class="status-dot"></div>
                 <div class="header-text">
                     <span id="bot-title">ນ້ອງໄຂ່</span>
                     <small>AI ຊ່ວຍຕອບຄຳຖາມກ່ຽວກັບ ສິນຊັບເມືອງເໜືອ</small>
-                    <small>v 0.0.2.4</small>
-
+                    <small>v 0.0.3.0</small>
                 </div>
             </div>
-            
             <div class="header-actions">
                 <span id="user-display-name" style="font-size: 0.85em; background: rgba(255,255,255,0.15); padding: 5px 10px; border-radius: 15px;">👤 ພະນັກງານ</span>
                 <label class="voice-toggle"><input type="checkbox" id="auto-speak" checked> <span>🔊 ເປີດສຽງ</span></label>
                 <button onclick="logout()" class="logout-btn">ອອກຈາກລະບົບ</button>
             </div>
         </div>
-        
-
 
         <div class="chat-messages" id="chat-messages">
             <div class="message bot-message">
                 ສະບາຍດີ! ຂ້ອຍແມ່ນ ນ້ອງໄຂ່ ຜູ້ຊ່ວຍ ຕອບຄຳຖາມທຸກຢ່າງ ຂອງ ສິນຊັບເມືອງເໜືອ.<br><br>
-                ທ່ານສາມາດພິມຄຳຖາມ ຫຼື <b>ກົດປຸ່ມໄມໂຄຣໂຟນ</b> ເພື່ອເວົ້າຖາມຂ້ອຍໄດ້ເລີຍ!
+                ທ່ານສາມາດພິມຄຳຖາມ, <b>ແນບເອກະສານ (PDF/ຮູບ)</b> ຫຼື <b>ກົດປຸ່ມໄມໂຄຣໂຟນ</b> ເພື່ອເວົ້າຖາມຂ້ອຍໄດ້ເລີຍ!
             </div>
         </div>
 
-        <div id="image-preview-container" style="display: none; padding: 10px 16px; background: white; border-top: 1px solid var(--border-color); align-items: flex-end; gap: 10px;">
-            <img id="image-preview" src="" style="max-height: 80px; border-radius: 8px; border: 1px solid #ccc;">
-            <button onclick="clearImage()" style="background: #e86355; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-weight: bold;">✕</button>
+        <div id="file-preview-container" style="display: none; padding: 10px 16px; background: white; border-top: 1px solid var(--border-color); flex-wrap: wrap; gap: 8px; align-items: center;">
+            <div id="file-tags" style="display: flex; flex-wrap: wrap; gap: 5px; flex-grow: 1;"></div>
+            <button onclick="clearFiles()" style="background: #e86355; color: white; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-weight: bold; flex-shrink: 0; display: flex; justify-content: center; align-items: center;">✕</button>
         </div>
 
         <div class="chat-input-area">
-            <input type="file" id="image-upload" accept="image/*" style="display: none;" onchange="handleImageSelection(event)">
-            <button id="attach-btn" class="action-btn" onclick="document.getElementById('image-upload').click()" title="ແນບຮູບພາບ" style="background: #eef5f8; color: var(--primary-color); box-shadow: none;">
+            <input type="file" id="file-upload" accept="image/*,application/pdf" multiple style="display: none;" onchange="handleFileSelection(event)">
+            
+            <button id="attach-btn" class="action-btn" onclick="document.getElementById('file-upload').click()" title="ແນບເອກະສານ" style="background: #eef5f8; color: var(--primary-color); box-shadow: none;">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
             </button>
 
@@ -63,23 +58,22 @@
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
             </button>
             
-            <input type="text" id="user-input" class="chat-input" placeholder="ພິມ, ເວົ້າ ຫຼື ແນບຮູບ..." onkeypress="handleEnter(event)">
+            <input type="text" id="user-input" class="chat-input" placeholder="ພິມ, ເວົ້າ ຫຼື ແນບເອກະສານ..." onkeypress="handleEnter(event)">
             
             <button id="send-btn" class="action-btn" onclick="sendMessage()">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
             </button>
         </div>
     </div>
-<div id="image-modal" class="image-modal" onclick="closeModal()">
-            <span class="close-modal">&times;</span>
-            <img class="modal-content" id="modal-img">
-        </div>
-    <script src="config.js"></script>
     
+    <div id="image-modal" class="image-modal" onclick="closeModal()">
+        <span class="close-modal">&times;</span>
+        <img class="modal-content" id="modal-img">
+    </div>
+    
+    <script src="config.js"></script>
     <script src="chatbot.js"></script>
-
     <script>
-        // เปลี่ยนชื่อบน Header ตาม config
         document.getElementById('bot-title').innerText = CHATBOT_CONFIG.BOT_NAME;
     </script>
 </body>
