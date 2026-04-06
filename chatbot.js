@@ -31,9 +31,11 @@ function showChat() {
     if (chatApp) chatApp.style.display = 'flex';
 }
 
+// ฟังก์ชันดึงประวัติจาก Google Sheets มาแสดง (รองรับหลายไฟล์และ PDF)
 async function loadChatHistory() {
     const userId = localStorage.getItem('ssmi_user_id');
     if (!userId) return;
+
     try {
         const response = await fetch(CHATBOT_CONFIG.API_URL, {
             method: 'POST',
@@ -43,12 +45,26 @@ async function loadChatHistory() {
         const data = await response.json();
         if (data.history && data.history.length > 0) {
             data.history.forEach(item => {
-                if (item.imageUrl) {
-                  const imgHtml = `<img src="${item.imageUrl}" class="chat-img" onclick="openModal(this.src)" style="max-width: 100%; max-height: 200px; border-radius: 8px; margin-bottom: 5px;"><br>${item.question}`;
-                    appendMessage(imgHtml, 'user-message', null, true);
-                } else {
-                    appendMessage(item.question, 'user-message');
+                let userDisplayHtml = item.question;
+                
+                // 🌟 ระบบแยกลิงก์ โชว์หลายรูป และสร้างปุ่มกดดู PDF
+                if (item.imageUrl && item.imageUrl.includes("http")) {
+                    const urls = item.imageUrl.split(/[\n, ]+/).filter(u => u.startsWith("http"));
+                    let filesHtml = '<div style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 5px;">';
+                    
+                    urls.forEach(url => {
+                        if (url.includes("view") || url.includes("pdf")) {
+                            filesHtml += `<a href="${url}" target="_blank" style="background:#eef5f8; color:#176b8a; padding:6px 12px; border-radius:8px; font-size:0.8rem; text-decoration:none; border:1px solid #c8dae2;">📄 ເບິ່ງເອກະສານ PDF</a>`;
+                        } else {
+                            filesHtml += `<img src="${url}" class="chat-img" onclick="openModal(this.src)" style="max-width: 150px; max-height: 150px; border-radius: 8px; object-fit: cover;">`;
+                        }
+                    });
+                    filesHtml += '</div>';
+                    userDisplayHtml = filesHtml + userDisplayHtml;
                 }
+                
+                appendMessage(userDisplayHtml, 'user-message', null, true);
+
                 if (!item.answer.includes("API Error")) {
                     let formattedAnswer = item.answer.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
                     appendMessage(formattedAnswer, 'bot-message', null, true);
