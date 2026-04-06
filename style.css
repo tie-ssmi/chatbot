@@ -54,6 +54,9 @@ body {
     justify-content: space-between;
     align-items: center;
     gap: 10px;
+    position: fixed;
+    top: 0px;
+    left: 0px;
 }
 
 .header-left { display: flex; align-items: center; }
