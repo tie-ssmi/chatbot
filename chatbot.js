@@ -97,34 +97,40 @@ async function loadChatHistory(isLoadMore = false) {
                 chunkContainer.appendChild(botDiv);
             });
 
-            // 🌟 นำไปแทรกต่อจากปุ่ม Load More 
-            // 🌟 นำไปแทรกต่อจากปุ่ม Load More 
+           // 🌟 นำไปแทรกต่อจากปุ่ม Load More 
             if (loadMoreContainer) {
                 loadMoreContainer.parentNode.insertBefore(chunkContainer, loadMoreContainer.nextSibling);
             } else {
                 chatMessages.insertBefore(chunkContainer, chatMessages.firstChild);
             }
 
-            // 🌟 แก้ไข: บังคับให้รอโหลดเสร็จแล้วดึงหน้าจอลงล่างสุด 🌟
-            setTimeout(() => {
-                if (isLoadMore) {
-                    // รักษาระดับสายตาเดิมตอนกดโหลดเพิ่ม
+            // ==========================================
+            // 🌟 แก้ไขใหม่: บังคับดึงหน้าจอลงล่างสุดแบบ 100% 
+            // ==========================================
+            if (isLoadMore) {
+                // กรณีที่ 1: ถ้ากด "โหลดประวัติเพิ่ม" ให้คงหน้าจอไว้ที่เดิม
+                requestAnimationFrame(() => {
                     chatMessages.scrollTop = chatMessages.scrollHeight - oldScrollHeight;
-                } else {
-                    // ถ้าเปิดเว็บครั้งแรก ให้เลื่อนลงไปล่างสุด (ข้อความล่าสุด)
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                }
-            }, 100);
-
-            // ดักจับกรณีมี "รูปภาพ" โหลดช้า เพื่อดึงหน้าจอลงล่างสุดอีกรอบเมื่อรูปมาครบ
-            setTimeout(() => {
-                const images = chatMessages.querySelectorAll('img.chat-img');
-                images.forEach(img => {
-                    img.onload = () => {
-                        if (!isLoadMore) chatMessages.scrollTop = chatMessages.scrollHeight;
-                    };
                 });
-            }, 150);
+            } else {
+                // กรณีที่ 2: ถ้าเปิดเว็บครั้งแรก หรือ กดรีเฟรช ให้ดิ่งลงล่างสุด!
+                const forceScrollToBottom = () => {
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                };
+
+                // สั่งรัวๆ 4 จังหวะ เพื่อเอาชนะความช้าของเบราว์เซอร์
+                forceScrollToBottom(); // สั่งทันที
+                requestAnimationFrame(forceScrollToBottom); // สั่งหลังวาด UI เสร็จ
+                setTimeout(forceScrollToBottom, 150); // สั่งซ้ำหลัง 0.15 วิ
+                setTimeout(forceScrollToBottom, 500); // สั่งย้ำอีกรอบเผื่อเน็ตช้า
+
+                // ดักจับพิเศษ: ถ้ารูปภาพโหลดเสร็จ ให้ดึงลงล่างสุดอีกรอบ
+                const images = chatMessages.querySelectorAll('img');
+                images.forEach(img => {
+                    img.addEventListener('load', forceScrollToBottom);
+                });
+            }
+            // ==========================================
             
             historyOffset += data.history.length;
         }
