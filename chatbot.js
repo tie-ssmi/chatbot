@@ -31,7 +31,6 @@ function showChat() {
     if (chatApp) chatApp.style.display = 'flex';
 }
 
-// ฟังก์ชันดึงประวัติจาก Google Sheets มาแสดง (รองรับหลายไฟล์และ PDF)
 // 🌟 ລະບົບດຶງປະຫວັດແຊທ (ໂຫຼດເທື່ອລະ 10 ຂໍ້)
 let historyOffset = 0;
 const HISTORY_LIMIT = 10; 
@@ -97,45 +96,54 @@ async function loadChatHistory(isLoadMore = false) {
                 chunkContainer.appendChild(botDiv);
             });
 
-           // 🌟 นำไปแทรกต่อจากปุ่ม Load More 
-            if (loadMoreContainer) {
-                loadMoreContainer.parentNode.insertBefore(chunkContainer, loadMoreContainer.nextSibling);
+            // ==========================================
+            // 🌟 ຈັດລຽງຕຳແໜ່ງໃຫ້ຖືກຕ້ອງ 100% 🌟
+            // ==========================================
+            if (isLoadMore) {
+                // ຖ້າກົດໂຫຼດເພີ່ມ ໃຫ້ເອົາໄປຕໍ່ລຸ່ມປຸ່ມ Load More (ດັນຂອງເກົ່າຂຶ້ນເທິງ)
+                if (loadMoreContainer) {
+                    loadMoreContainer.parentNode.insertBefore(chunkContainer, loadMoreContainer.nextSibling);
+                }
             } else {
-                chatMessages.insertBefore(chunkContainer, chatMessages.firstChild);
+                
+              // 🌟 ສຳລັບໂຫຼດຄັ້ງທຳອິດ: ລຶບຂໍ້ຄວາມຕ້ອນຮັບຖິ້ມກ່ອນ ເພື່ອບໍ່ໃຫ້ມັນມາຂວາງທາງ!
+            const existingMessages = chatMessages.querySelectorAll('.message');
+            existingMessages.forEach(msg => {
+                if(msg.id !== 'welcome-message') msg.remove(); // ลบแชทเก่าออก
+            });
+            const welcomeMsg = document.getElementById('welcome-message');
+            if (welcomeMsg) welcomeMsg.style.display = 'none'; // ซ่อนข้อความต้อนรับ
+                
+                // 🌟 ເອົາປະຫວັດແຊທໄປວາງໄວ້ລຸ່ມສຸດ (ລ່າສຸດຢູ່ລຸ່ມ) ແບບແອັບແຊທທົ່ວໄປ!
+                chatMessages.appendChild(chunkContainer);
             }
 
             // ==========================================
-            // 🌟 แก้ไขใหม่: บังคับดึงหน้าจอลงล่างสุดแบบ 100% 
+            // 🌟 ບັງຄັບດຶງໜ້າຈໍລົງລຸ່ມສຸດ (Scroll to Bottom)
             // ==========================================
             if (isLoadMore) {
-                // กรณีที่ 1: ถ้ากด "โหลดประวัติเพิ่ม" ให้คงหน้าจอไว้ที่เดิม
                 requestAnimationFrame(() => {
                     chatMessages.scrollTop = chatMessages.scrollHeight - oldScrollHeight;
                 });
             } else {
-                // กรณีที่ 2: ถ้าเปิดเว็บครั้งแรก หรือ กดรีเฟรช ให้ดิ่งลงล่างสุด!
                 const forceScrollToBottom = () => {
                     chatMessages.scrollTop = chatMessages.scrollHeight;
                 };
 
-                // สั่งรัวๆ 4 จังหวะ เพื่อเอาชนะความช้าของเบราว์เซอร์
-                forceScrollToBottom(); // สั่งทันที
-                requestAnimationFrame(forceScrollToBottom); // สั่งหลังวาด UI เสร็จ
-                setTimeout(forceScrollToBottom, 150); // สั่งซ้ำหลัง 0.15 วิ
-                setTimeout(forceScrollToBottom, 500); // สั่งย้ำอีกรอบเผื่อเน็ตช้า
+                forceScrollToBottom(); 
+                requestAnimationFrame(forceScrollToBottom); 
+                setTimeout(forceScrollToBottom, 150); 
+                setTimeout(forceScrollToBottom, 500); 
 
-                // ดักจับพิเศษ: ถ้ารูปภาพโหลดเสร็จ ให้ดึงลงล่างสุดอีกรอบ
-                const images = chatMessages.querySelectorAll('img');
+                const images = chatMessages.querySelectorAll('img.chat-img');
                 images.forEach(img => {
                     img.addEventListener('load', forceScrollToBottom);
                 });
             }
-            // ==========================================
             
             historyOffset += data.history.length;
         }
         
-        // 🌟 ปิด/เปิดปุ่ม ตามจำนวนประวัติที่เหลืออยู่
         if (loadMoreContainer) {
             if (data.hasMore) {
                 loadMoreContainer.style.display = 'block';
