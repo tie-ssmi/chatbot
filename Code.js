@@ -1,17 +1,5 @@
 var GEMINI_API_KEYS = [
-  "AIzaSyAw5pY18otDX98Zj5d9QFWBGCUjLLhS02I",
-  "AIzaSyDaWNv1YoKfZNxV0cMTKp_JmQFVKpzFn5M",
-  "AIzaSyBjcIdyDKp8UC33OVjImYbIb2jrJX-zSLc",
-  "AIzaSyD0jW7EyZco6iRrnLOX5bi15Ji6edf4DPk",
-  "AIzaSyAcuP3BIF5oKfJGtn7FmOuNlUel0po16GE",  
-  "AIzaSyASzdzrmN3xqhGwM87X0WqsHZ5enCFuBC0", 
-  "AIzaSyAW9V1C6bjXgE2EzTpwrr15a4eyYLdW6WE",  
-  "AIzaSyBMDQSoAps9l_tW74w0NidFneXft78h1gQ",
-  "AIzaSyCiReSFLydaJytmtVr-OxSko2CrsVw6PuU",
-  "AIzaSyCsQWiLyQlQBbApf-KVmH1tj7FSDs-hatY",
-  "AIzaSyA4cYCKylAkOL1P-KRuA4N34fzoO9HOJEE",
-  "AIzaSyCUdXTmWxDtVdg6cyG2j3MlgZTl0VZr9eQ",
-  "AIzaSyAZTZjpgmVNDdL0QJHb8vqt0K93x_TAsRY"
+  "*****"
 ];
 var GOOGLE_DOC_ID = "1cObuEeUbwHTpA05WoHQVymlDMVr-ZR0KVzLjSsWkvC0";
 var GOOGLE_TXT_ID = "1tx6FwdLdDi9Lzl-Ghk780X58XbGm7VLg00"; 
