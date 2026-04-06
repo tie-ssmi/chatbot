@@ -32,26 +32,45 @@ function showChat() {
 }
 
 // ฟังก์ชันดึงประวัติจาก Google Sheets มาแสดง (รองรับหลายไฟล์และ PDF)
-async function loadChatHistory() {
+// 🌟 ລະບົບດຶງປະຫວັດແຊທ (ໂຫຼດເທື່ອລະ 10 ຂໍ້)
+let historyOffset = 0;
+const HISTORY_LIMIT = 10; 
+
+async function loadChatHistory(isLoadMore = false) {
     const userId = localStorage.getItem('ssmi_user_id');
     if (!userId) return;
+
+    const loadMoreContainer = document.getElementById('load-more-container');
+    if (isLoadMore && loadMoreContainer) {
+        const btn = loadMoreContainer.querySelector('button');
+        btn.innerText = "ກຳລັງໂຫຼດ...";
+        btn.disabled = true;
+    }
 
     try {
         const response = await fetch(CHATBOT_CONFIG.API_URL, {
             method: 'POST',
-            body: JSON.stringify({ action: 'getHistory', userId: userId }),
+            body: JSON.stringify({ 
+                action: 'getHistory', 
+                userId: userId, 
+                offset: historyOffset, 
+                limit: HISTORY_LIMIT 
+            }),
             headers: { 'Content-Type': 'text/plain;charset=utf-8' }
         });
         const data = await response.json();
+        
+        const chatMessages = document.getElementById('chat-messages');
+        const oldScrollHeight = chatMessages.scrollHeight; 
+
         if (data.history && data.history.length > 0) {
+            const chunkContainer = document.createDocumentFragment();
+
             data.history.forEach(item => {
                 let userDisplayHtml = item.question;
-                
-                // 🌟 ระบบแยกลิงก์ โชว์หลายรูป และสร้างปุ่มกดดู PDF
                 if (item.imageUrl && item.imageUrl.includes("http")) {
                     const urls = item.imageUrl.split(/[\n, ]+/).filter(u => u.startsWith("http"));
                     let filesHtml = '<div style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 5px;">';
-                    
                     urls.forEach(url => {
                         if (url.includes("view") || url.includes("pdf")) {
                             filesHtml += `<a href="${url}" target="_blank" style="background:#eef5f8; color:#176b8a; padding:6px 12px; border-radius:8px; font-size:0.8rem; text-decoration:none; border:1px solid #c8dae2;">📄 ເບິ່ງເອກະສານ PDF</a>`;
@@ -63,17 +82,64 @@ async function loadChatHistory() {
                     userDisplayHtml = filesHtml + userDisplayHtml;
                 }
                 
-                appendMessage(userDisplayHtml, 'user-message', null, true);
+                const userDiv = document.createElement('div');
+                userDiv.className = `message user-message`;
+                userDiv.innerHTML = userDisplayHtml;
+                chunkContainer.appendChild(userDiv);
 
+                const botDiv = document.createElement('div');
+                botDiv.className = `message bot-message`;
                 if (!item.answer.includes("API Error")) {
-                    let formattedAnswer = item.answer.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
-                    appendMessage(formattedAnswer, 'bot-message', null, true);
+                    botDiv.innerHTML = item.answer.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
                 } else {
-                    appendMessage("⚠️ ຂໍອະໄພ, ຂໍ້ຄວາມນີ້ເກີດຂໍ້ຜິດພາດ", 'bot-message');
+                    botDiv.textContent = "⚠️ ຂໍອະໄພ, ຂໍ້ຄວາມນີ້ເກີດຂໍ້ຜິດພາດ";
                 }
+                chunkContainer.appendChild(botDiv);
             });
+
+            // 🌟 นำไปแทรกต่อจากปุ่ม Load More 
+            if (loadMoreContainer) {
+                loadMoreContainer.parentNode.insertBefore(chunkContainer, loadMoreContainer.nextSibling);
+            } else {
+                chatMessages.insertBefore(chunkContainer, chatMessages.firstChild);
+            }
+
+            if (isLoadMore) {
+                // เลื่อนหน้าจอชดเชยให้ไม่เด้งไปบนสุด
+                chatMessages.scrollTop = chatMessages.scrollHeight - oldScrollHeight;
+            } else {
+                // ถ้าโหลดครั้งแรกตอนเปิดเว็บ ให้เลื่อนลงไปอ่านแชทล่างสุด
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+            
+            historyOffset += data.history.length;
         }
-    } catch (e) { console.log("Load history failed", e); }
+        
+        // 🌟 ปิด/เปิดปุ่ม ตามจำนวนประวัติที่เหลืออยู่
+        if (loadMoreContainer) {
+            if (data.hasMore) {
+                loadMoreContainer.style.display = 'block';
+                const btn = loadMoreContainer.querySelector('button');
+                btn.innerText = "+ ໂຫຼດປະຫວັດເພີ່ມເຕີມ";
+                btn.disabled = false;
+            } else {
+                loadMoreContainer.style.display = 'none';
+            }
+        }
+
+    } catch (e) { 
+        console.log("Load history failed", e); 
+        if (isLoadMore && loadMoreContainer) {
+            const btn = loadMoreContainer.querySelector('button');
+            btn.innerText = "+ ໂຫຼດປະຫວັດເພີ່ມເຕີມ";
+            btn.disabled = false;
+        }
+    }
+}
+
+// ผูกฟังก์ชันปุ่ม
+function loadMoreHistory() {
+    loadChatHistory(true);
 }
 
 // ==========================================
