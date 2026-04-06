@@ -25,7 +25,7 @@
                 <div class="header-text">
                     <span id="bot-title">ນ້ອງໄຂ່</span>
                     <small>AI ຊ່ວຍຕອບຄຳຖາມກ່ຽວກັບ ສິນຊັບເມືອງເໜືອ</small>
-                    <small>v 0.0.3.2</small>
+                    <small>v 0.0.3.3</small>
                 </div>
             </div>
             <div class="header-actions">
@@ -40,6 +40,16 @@
                 ສະບາຍດີ! ຂ້ອຍແມ່ນ ນ້ອງໄຂ່ ຜູ້ຊ່ວຍ ຕອບຄຳຖາມທຸກຢ່າງ ຂອງ ສິນຊັບເມືອງເໜືອ.<br><br>
                 ທ່ານສາມາດພິມຄຳຖາມ, <b>ແນບເອກະສານ (PDF/ຮູບ)</b> ຫຼື <b>ກົດປຸ່ມໄມໂຄຣໂຟນ</b> ເພື່ອເວົ້າຖາມຂ້ອຍໄດ້ເລີຍ!
             </div>
+        </div>
+        <div style="padding: 10px 16px; background: #f8fafd; border-top: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#176b8a" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+            <select id="ai-model-select" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #c8dae2; background: white; color: #176b8a; font-family: 'Noto Sans Lao', sans-serif; font-size: 0.9rem; cursor: pointer; outline: none; font-weight: 600; flex-grow: 1; appearance: none;">
+                <option value="hr">✨ AI ບຸກຄະລາກອນ (ລະບຽບພະນັກງານ)</option>
+                <option value="expense">💰 AI ບັນຊີ (ຄຸ້ມຄອງລາຍຈ່າຍ)</option>
+                <option value="loan_gov">🏛️ AI ສິນເຊື່ອ (ລັດຖະກອນ)</option>
+                <option value="loan_sec">🏠 AI ສິນເຊື່ອ (ຫຼັກຊັບຄ້ຳປະກັນ)</option>
+                <option value="deposit">🏦 AI ເງິນຝາກ (ລະບຽບເງິນຝາກ)</option>
+            </select>
         </div>
 
         <div id="file-preview-container" style="display: none; padding: 10px 16px; background: white; border-top: 1px solid var(--border-color); flex-wrap: wrap; gap: 8px; align-items: center;">

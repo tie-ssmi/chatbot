@@ -151,7 +151,7 @@ async function sendMessage() {
 
     const loadingId = 'loading-' + Date.now();
     appendMessage('<div class="typing-indicator"><span></span><span></span><span></span></div>', 'bot-message', loadingId, true);
-
+    const selectedModel = document.getElementById('ai-model-select').value;
     try {
         const response = await fetch(CHATBOT_CONFIG.API_URL, {
             method: 'POST',
@@ -161,7 +161,8 @@ async function sendMessage() {
                 userId: userId,
                 userName: userName,
                 history: currentChatHistory,
-                files: payloadFiles
+                files: payloadFiles,
+                modelCategory: selectedModel // 🌟 ส่งหมวดหมู่แนบไปด้วย!
             }),
             headers: { 'Content-Type': 'text/plain;charset=utf-8' }
         });
