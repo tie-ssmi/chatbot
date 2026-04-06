@@ -1,5 +1,9 @@
 /* --- style.css --- */
-
+* {
+    box-sizing: border-box;
+    padding: 0px;
+    margin: 0px;
+}
 :root {
     --primary-color: #176b8a;
     --primary-strong: #0f4f67;
