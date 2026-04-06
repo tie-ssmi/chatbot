@@ -117,13 +117,26 @@ function clearFiles() {
     document.getElementById('file-tags').innerHTML = '';
 }
 
+// 🌟 แทนที่ฟังก์ชัน sendMessage() เดิมด้วยตัวนี้ครับ
 async function sendMessage() {
     const text = userInput.value.trim();
     if (!text && currentFiles.length === 0) return;
 
+    // 🌟 1. ดึงไฟล์มาโชว์ในแชททันทีที่กดส่ง
     let userDisplayHtml = text;
     if (currentFiles.length > 0) {
-       userDisplayHtml = `<div style="color: #0f4f67; font-size: 0.8rem; margin-bottom: 5px;">📎 ແນບເອກະສານແລ້ວ ${currentFiles.length} ສະບັບ</div>` + text;
+        let filesHtml = '<div style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 5px;">';
+        currentFiles.forEach(file => {
+            if (file.mimeType.includes('pdf')) {
+                // ถ้าเป็น PDF ให้โชว์กล่องชื่อไฟล์สวยๆ
+                filesHtml += `<div style="background:#eef5f8; color:#176b8a; padding:6px 12px; border-radius:8px; font-size:0.8rem; border:1px solid #c8dae2;">📄 ເອກະສານ: ${file.name}</div>`;
+            } else {
+                // ถ้าเป็นรูปภาพ ให้โชว์รูปขนาดย่อทันที
+                filesHtml += `<img src="data:${file.mimeType};base64,${file.base64}" class="chat-img" onclick="openModal(this.src)" style="max-width: 150px; max-height: 150px; border-radius: 8px; object-fit: cover; cursor: pointer;">`;
+            }
+        });
+        filesHtml += '</div>';
+        userDisplayHtml = filesHtml + text;
     }
 
     appendMessage(userDisplayHtml, 'user-message', null, true); 
@@ -159,9 +172,11 @@ async function sendMessage() {
         if (data.reply) {
             const formattedReply = data.reply.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
             appendMessage(formattedReply, 'bot-message', null, true);
+            
             currentChatHistory.push({ role: 'user', message: text });
             currentChatHistory.push({ role: 'assistant', message: data.reply });
             if (currentChatHistory.length > 20) currentChatHistory = currentChatHistory.slice(-20);
+            
             speakText(data.reply); 
         } else if (data.error) {    
             appendMessage("⚠️ ຂໍອະໄພ: " + data.error, 'bot-message');
