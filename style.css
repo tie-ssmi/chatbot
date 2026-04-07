@@ -147,11 +147,11 @@ body {
     border-top: 1px solid var(--border-color);
     gap: 10px;
     align-items: center;
-    position: fixed;
+    position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
-
+    z-index: 10;
 }
 .chat-input-area input {
     width: 30%;
@@ -282,7 +282,10 @@ body {
     }
     .chat-messages { padding: 14px; }
     .message { max-width: 90%; font-size: 0.92rem; }
-    .chat-input-area { padding: 10px; }
+    .chat-input-area {
+        padding: 10px;
+        padding-bottom: calc(10px + env(safe-area-inset-bottom));
+    }
     .chat-input-area input { font-size: 0.93rem; }
     .action-btn { width: 42px; height: 42px; border-radius: 12px; }
 }
