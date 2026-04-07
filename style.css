@@ -94,10 +94,11 @@ body {
     display: flex;
     flex-direction: column;
     overflow-y: scroll; /* บังคับให้แสดง Scrollbar เสมอเพื่อรักษาความกว้างพื้นที่แชท */
+    gap: 12px;
 }
 .message {
     max-width: min(82%, 620px);
-    padding: 12px 14px;
+    padding: 12px 15px;
     border-radius: 16px;
     font-size: 0.95rem;
     line-height: 1.55;

@@ -25,7 +25,7 @@
                 <div class="header-text">
                     <span id="bot-title">ນ້ອງໄຂ່</span>
                     <small>AI ຊ່ວຍຕອບຄຳຖາມກ່ຽວກັບ ສິນຊັບເມືອງເໜືອ</small>
-                    <small>v 0.0.4.3</small>
+                    <small>v 0.0.4.4</small>
                 </div>
             </div>
             <div class="header-actions">
@@ -127,30 +127,58 @@
     </script>
 
 <script>
-        // 🌟 Javascript สำหรับเปิด/ปิด และกดเลือก AI
+        // ==========================================
+        // 🌟 Javascript สำหรับจัดการ AI Model (มีระบบจำค่า)
+        // ==========================================
+
+        // 1. ฟังก์ชันตอนกดเลือกโมเดล (เพิ่มการจำค่าลง LocalStorage)
+        function selectModel(value, shortName, element) {
+            document.getElementById('ai-model-select').value = value;
+            document.getElementById('model-btn-text').innerText = shortName;
+            
+            document.querySelectorAll('.model-item').forEach(item => item.classList.remove('active'));
+            if (element) element.classList.add('active');
+            
+            document.getElementById('model-popup-menu').classList.remove('show');
+
+            // 🌟 พระเอกอยู่ตรงนี้: สั่งให้เบราว์เซอร์จดจำค่าที่เลือกลงเครื่อง
+            localStorage.setItem('ssmi_saved_model_value', value);
+            localStorage.setItem('ssmi_saved_model_name', shortName);
+        }
+
+        // 2. ฟังก์ชันเปิด/ปิดเมนู
         function toggleModelMenu(event) {
             event.stopPropagation();
             document.getElementById('model-popup-menu').classList.toggle('show');
         }
 
-        function selectModel(value, shortName, element) {
-            // 1. เซฟค่าที่เลือกลงระบบ
-            document.getElementById('ai-model-select').value = value;
-            // 2. เปลี่ยนชื่อบนปุ่ม
-            document.getElementById('model-btn-text').innerText = shortName;
-            // 3. จัดการเครื่องหมายถูก (ลบอันเก่า ใส่ให้อันใหม่)
-            document.querySelectorAll('.model-item').forEach(item => item.classList.remove('active'));
-            element.classList.add('active');
-            // 4. ปิดเมนู
-            document.getElementById('model-popup-menu').classList.remove('show');
-        }
-
-        // ถ้าคลิกที่ว่าง ให้เมนูปิดเองอัตโนมัติ
+        // 3. ฟังก์ชันปิดเมนูอัตโนมัติเมื่อคลิกที่ว่าง
         document.addEventListener('click', function(event) {
             const popup = document.getElementById('model-popup-menu');
             const btn = document.getElementById('model-toggle-btn');
             if (popup.classList.contains('show') && !popup.contains(event.target) && !btn.contains(event.target)) {
                 popup.classList.remove('show');
+            }
+        });
+
+        // 4. 🌟 ฟังก์ชันโหลดค่าเดิมกลับมา ตอนเปิดเว็บหรือกดรีเฟรช 🌟
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedValue = localStorage.getItem('ssmi_saved_model_value');
+            const savedName = localStorage.getItem('ssmi_saved_model_name');
+
+            if (savedValue && savedName) {
+                // อัปเดตปุ่มและค่าที่ซ่อนอยู่
+                document.getElementById('ai-model-select').value = savedValue;
+                document.getElementById('model-btn-text').innerText = savedName;
+
+                // วนลูปหาว่าต้องไปติ๊กถูก (active) ที่ตัวไหน
+                document.querySelectorAll('.model-item').forEach(item => {
+                    item.classList.remove('active');
+                    // เช็คจากคำสั่ง onclick ว่าตรงกับ value ที่บันทึกไว้ไหม
+                    if (item.getAttribute('onclick').includes("'" + savedValue + "'")) {
+                        item.classList.add('active');
+                    }
+                });
             }
         });
     </script>
