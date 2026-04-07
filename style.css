@@ -214,64 +214,71 @@ body {
     }
 }
 
-@media (max-width: 560px) {
-    /* จัดระเบียบ Header บนมือถือ */
-    .chat-header { padding: 10px; flex-shrink: 0; }
-    .header-left { gap: 6px; }
-    .bot-logo { width: 34px; height: 34px; margin-right: 0; }
-    #bot-title { font-size: 0.95rem; white-space: nowrap; }
-    
-    /* ซ่อนคำอธิบายยาวๆ บนมือถือ */
-    .header-text small:nth-child(2) { display: none; }
-    
-    .header-actions { gap: 4px; flex-shrink: 0; }
-    #user-display-name { max-width: 65px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 4px 6px; font-size: 0.75rem; }
-    .voice-toggle { padding: 5px; }
-    .voice-toggle span { display: none; }
-    .logout-btn { font-size: 0.75rem; padding: 5px 8px; }
-    
-    /* จัดพื้นที่แชท */
-    .chat-messages { padding: 12px; flex-grow: 1; overflow-y: auto; }
-    .message { max-width: 94%; font-size: 0.9rem; padding: 10px 12px; }
-    
-    /* ล็อกกล่องพิมพ์แชทด้านล่างสุด */
-    .chat-input-area { padding: 10px 8px; flex-shrink: 0; }
-    .chat-input-area input { font-size: 0.9rem; padding: 10px; }
-    .action-btn { width: 40px; height: 40px; border-radius: 10px; }
-    
-    .chat-sidebar { width: 85%; max-width: 320px; }
+/* =========================================
+   🌟 CSS สำหรับแท็บเล็ตและมือถือ (ล็อกหน้าจอเด็ดขาด + แก้ขอบจม)
+   ========================================= */
+@media (max-width: 920px) {
+    /* 🌟 เวทมนตร์แก้ปัญหาความสูงบน Safari มือถือ (-webkit-fill-available) */
+    html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        height: -webkit-fill-available;
+        width: 100%;
+        overflow: hidden;
+    }
+
+    body { display: flex; flex-direction: column; }
+
+    .chat-container {
+        width: 100vw;
+        height: 100%;
+        min-height: 100vh;
+        min-height: -webkit-fill-available;
+        max-height: 100%;
+        border-radius: 0;
+        border: none;
+        display: flex;
+        flex-direction: column;
+        margin: 0;
+        box-sizing: border-box;
+    }
 }
 
-/* =========================================
-   🌟 CSS สำหรับหน้าจอคอมพิวเตอร์ (Desktop Mode แบบ Gemini)
-   ========================================= */
-@media (min-width: 1024px) {
-    body { padding: 24px; }
-    
-    .chat-container {
-        width: min(100%, 1150px); /* ขยายหน้าต่างแชทให้กว้างขึ้น */
-        height: min(90vh, 860px);
-        border-radius: 24px;
-        padding-left: 280px; /* 🌟 เว้นพื้นที่ด้านซ้าย 280px ให้ Sidebar เสียบเข้าไป! */
-    }
-    
-    .chat-header { padding: 16px 20px; border-top-right-radius: 24px; }
-    #bot-title { font-size: 1.04rem; }
-    .chat-messages { padding: 24px 26px; }
-    .message { font-size: 0.97rem; }
-    .chat-input-area { padding: 16px 18px; border-bottom-right-radius: 24px; }
+@media (max-width: 560px) {
+    /* 🌟 1. จัดระเบียบ Header ใหม่ ไม่ให้เบียดกันทะลุขอบ */
+    .chat-header { padding: 10px 12px; flex-shrink: 0; }
+    .header-left { gap: 6px; }
+    .bot-logo { width: 32px; height: 32px; margin-right: 0; }
+    #bot-title { font-size: 0.9rem; white-space: nowrap; }
+    .header-text small:nth-child(2) { display: none; } /* ซ่อนคำอธิบายยาวๆ */
 
-    /* 🌟 สั่งให้ Sidebar แสดงผลถาวร */
-    .chat-sidebar {
-        transform: translateX(0) !important; /* บังคับสไลด์ออกมาเสมอ */
-        border-radius: 24px 0 0 24px; /* มุมโค้งซ้ายเนียนๆ */
-        box-shadow: none; /* เอาเงาออกให้เป็นเนื้อเดียวกัน */
-        border-right: 1px solid var(--border-color); /* มีเส้นคั่นบางๆ แบบ Gemini */
+    .header-actions { gap: 8px; flex-shrink: 0; }
+    #user-display-name { display: none; } /* 🌟 ซ่อนป้ายชื่อพนักงาน คืนพื้นที่ให้ Header! */
+    .voice-toggle { padding: 6px; margin: 0; }
+    .voice-toggle span { display: none; }
+    .logout-btn { font-size: 0.75rem; padding: 6px 12px; margin: 0; }
+
+    /* 🌟 2. ดันพื้นที่แชทให้เลื่อนได้ลื่นๆ บนมือถือ */
+    .chat-messages { 
+        padding: 12px; 
+        flex-grow: 1; 
+        overflow-y: auto; 
+        -webkit-overflow-scrolling: touch; /* ให้เลื่อนสมูทบน iOS */
     }
-    
-    /* 🌟 ซ่อนปุ่ม Hamburger และฉากหลังดำ */
-    .menu-btn { display: none !important; }
-    .sidebar-backdrop { display: none !important; }
+    .message { max-width: 94%; font-size: 0.9rem; padding: 10px 12px; }
+
+    /* 🌟 3. ยกกล่องพิมพ์หนีแถบเบราว์เซอร์ด้านล่าง (Safe Area) */
+    .chat-input-area {
+        /* บวกพื้นที่ด้านล่างเพิ่ม เพื่อหนีขีด Home Indicator ของ iPhone และแถบเบราว์เซอร์ */
+        padding: 10px 8px calc(15px + env(safe-area-inset-bottom)); 
+        flex-shrink: 0;
+        background: white;
+    }
+    .chat-input-area input { font-size: 0.9rem; padding: 10px; }
+    .action-btn { width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; }
+
+    .chat-sidebar { width: 85%; max-width: 320px; }
 }
 /* 🌟 CSS สำหรับ Modal ซูมรูปภาพ */
 .image-modal {
