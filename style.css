@@ -29,7 +29,7 @@ body {
     display: flex; 
     justify-content: center; 
     align-items: center; 
-    min-height: 100vh;
+    height: 99vh;
    
 }
 
@@ -55,7 +55,11 @@ body {
     justify-content: space-between;
     align-items: center;
     gap: 10px;
-    position: relative; /* 🌟 เปลี่ยนเป็น relative ให้อยู่ในกรอบแชทเสมอ */
+    position: fixed; /* 🌟 เปลี่ยนเป็น fixed ให้อยู่ในกรอบแชทเสมอ */
+    top: 0;
+    left: 0;
+    right: 0;
+
     z-index: 100;
     flex-shrink: 0;
 }
@@ -127,7 +131,10 @@ body {
     border-top: 1px solid var(--border-color);
     gap: 10px;
     align-items: center;
-
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
 }
 .chat-input-area input {
     width: 30%;
