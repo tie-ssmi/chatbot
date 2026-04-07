@@ -18,14 +18,28 @@
     </script>
 
     <div class="chat-container">
+        <div id="sidebar-backdrop" class="sidebar-backdrop" onclick="toggleSidebar()"></div>
+        <div id="chat-sidebar" class="chat-sidebar">
+            <button class="new-chat-btn" onclick="startNewChat()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                ສ້າງແຊທໃໝ່ (New Chat)
+            </button>
+            <div class="thread-list-title">ປະຫວັດການສົນທະນາ</div>
+            <div id="thread-list-container" class="thread-list-container">
+                </div>
+        </div>
+
         <div class="chat-header">
             <div class="header-left">
+                <button class="menu-btn" onclick="toggleSidebar()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
                 <img src="Nrng-Khai.png" alt="Nong Khai Logo" class="bot-logo">
                 <div class="status-dot"></div>
                 <div class="header-text">
                     <span id="bot-title">ນ້ອງໄຂ່</span>
                     <small>AI ຊ່ວຍຕອບຄຳຖາມກ່ຽວກັບ ສິນຊັບເມືອງເໜືອ</small>
-                    <small>v 0.0.4.4</small>
+                    <small>v 0.0.5.1</small>
                 </div>
             </div>
             <div class="header-actions">
@@ -41,11 +55,7 @@
                     + ໂຫຼດປະຫວັດເພີ່ມເຕີມ
                 </button>
             </div>
-            <div class="message bot-message" id="welcome-message">
-                ສະບາຍດີ! ຂ້ອຍແມ່ນ ນ້ອງໄຂ່ ຜູ້ຊ່ວຍ ຕອບຄຳຖາມທຸກຢ່າງ ຂອງ ສິນຊັບເມືອງເໜືອ.<br><br>
-                ທ່ານສາມາດພິມຄຳຖາມ, <b>ແນບເອກະສານ (PDF/ຮູບ)</b> ຫຼື <b>ກົດປຸ່ມໄມໂຄຣໂຟນ</b> ເພື່ອເວົ້າຖາມຂ້ອຍໄດ້ເລີຍ!
             </div>
-        </div>
 
         <div id="file-preview-container" style="display: none; padding: 10px 16px; background: white; border-top: 1px solid var(--border-color); flex-wrap: wrap; gap: 8px; align-items: center;">
             <div id="file-tags" style="display: flex; flex-wrap: wrap; gap: 5px; flex-grow: 1;"></div>
@@ -124,35 +134,21 @@
     <script src="chatbot.js"></script>
     <script>
         document.getElementById('bot-title').innerText = CHATBOT_CONFIG.BOT_NAME;
-    </script>
 
-<script>
-        // ==========================================
-        // 🌟 Javascript สำหรับจัดการ AI Model (มีระบบจำค่า)
-        // ==========================================
-
-        // 1. ฟังก์ชันตอนกดเลือกโมเดล (เพิ่มการจำค่าลง LocalStorage)
-        function selectModel(value, shortName, element) {
-            document.getElementById('ai-model-select').value = value;
-            document.getElementById('model-btn-text').innerText = shortName;
-            
-            document.querySelectorAll('.model-item').forEach(item => item.classList.remove('active'));
-            if (element) element.classList.add('active');
-            
-            document.getElementById('model-popup-menu').classList.remove('show');
-
-            // 🌟 พระเอกอยู่ตรงนี้: สั่งให้เบราว์เซอร์จดจำค่าที่เลือกลงเครื่อง
-            localStorage.setItem('ssmi_saved_model_value', value);
-            localStorage.setItem('ssmi_saved_model_name', shortName);
-        }
-
-        // 2. ฟังก์ชันเปิด/ปิดเมนู
+        // Script ควบคุม Dropdown โมเดล (ของเดิม)
         function toggleModelMenu(event) {
             event.stopPropagation();
             document.getElementById('model-popup-menu').classList.toggle('show');
         }
-
-        // 3. ฟังก์ชันปิดเมนูอัตโนมัติเมื่อคลิกที่ว่าง
+        function selectModel(value, shortName, element) {
+            document.getElementById('ai-model-select').value = value;
+            document.getElementById('model-btn-text').innerText = shortName;
+            document.querySelectorAll('.model-item').forEach(item => item.classList.remove('active'));
+            if(element) element.classList.add('active');
+            document.getElementById('model-popup-menu').classList.remove('show');
+            localStorage.setItem('ssmi_saved_model_value', value);
+            localStorage.setItem('ssmi_saved_model_name', shortName);
+        }
         document.addEventListener('click', function(event) {
             const popup = document.getElementById('model-popup-menu');
             const btn = document.getElementById('model-toggle-btn');
@@ -160,24 +156,15 @@
                 popup.classList.remove('show');
             }
         });
-
-        // 4. 🌟 ฟังก์ชันโหลดค่าเดิมกลับมา ตอนเปิดเว็บหรือกดรีเฟรช 🌟
         document.addEventListener('DOMContentLoaded', () => {
             const savedValue = localStorage.getItem('ssmi_saved_model_value');
             const savedName = localStorage.getItem('ssmi_saved_model_name');
-
             if (savedValue && savedName) {
-                // อัปเดตปุ่มและค่าที่ซ่อนอยู่
                 document.getElementById('ai-model-select').value = savedValue;
                 document.getElementById('model-btn-text').innerText = savedName;
-
-                // วนลูปหาว่าต้องไปติ๊กถูก (active) ที่ตัวไหน
                 document.querySelectorAll('.model-item').forEach(item => {
                     item.classList.remove('active');
-                    // เช็คจากคำสั่ง onclick ว่าตรงกับ value ที่บันทึกไว้ไหม
-                    if (item.getAttribute('onclick').includes("'" + savedValue + "'")) {
-                        item.classList.add('active');
-                    }
+                    if (item.getAttribute('onclick').includes("'" + savedValue + "'")) item.classList.add('active');
                 });
             }
         });
