@@ -17,15 +17,18 @@
         }
     </script>
 
-    <div class="chat-container ">
+    <div class="chat-container">
         <div class="chat-header">
             <div class="header-left">
+                <button class="menu-btn" onclick="toggleSidebar()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
                 <img src="Nrng-Khai.png" alt="Nong Khai Logo" class="bot-logo">
                 <div class="status-dot"></div>
                 <div class="header-text">
                     <span id="bot-title">ນ້ອງໄຂ່</span>
                     <small>AI ຊ່ວຍຕອບຄຳຖາມກ່ຽວກັບ ສິນຊັບເມືອງເໜືອ</small>
-                    <small>v 0.0.3.7</small>
+                    <small>v 0.0.5.2</small>
                 </div>
             </div>
             <div class="header-actions">
@@ -36,11 +39,12 @@
         </div>
 
         <div class="chat-messages" id="chat-messages">
-            <div class="message bot-message">
-                ສະບາຍດີ! ຂ້ອຍແມ່ນ ນ້ອງໄຂ່ ຜູ້ຊ່ວຍ ຕອບຄຳຖາມທຸກຢ່າງ ຂອງ ສິນຊັບເມືອງເໜືອ.<br><br>
-                ທ່ານສາມາດພິມຄຳຖາມ, <b>ແນບເອກະສານ (PDF/ຮູບ)</b> ຫຼື <b>ກົດປຸ່ມໄມໂຄຣໂຟນ</b> ເພື່ອເວົ້າຖາມຂ້ອຍໄດ້ເລີຍ!
+            <div id="load-more-container" style="text-align: center; margin-bottom: 15px; display: none;">
+                <button onclick="loadMoreHistory()" style="background: white; color: var(--primary-color); border: 1px solid #c8dae2; padding: 6px 16px; border-radius: 20px; font-family: 'Noto Sans Lao', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
+                    + ໂຫຼດປະຫວັດເພີ່ມເຕີມ
+                </button>
             </div>
-        </div>
+            </div>
 
         <div id="file-preview-container" style="display: none; padding: 10px 16px; background: white; border-top: 1px solid var(--border-color); flex-wrap: wrap; gap: 8px; align-items: center;">
             <div id="file-tags" style="display: flex; flex-wrap: wrap; gap: 5px; flex-grow: 1;"></div>
@@ -119,33 +123,38 @@
     <script src="chatbot.js"></script>
     <script>
         document.getElementById('bot-title').innerText = CHATBOT_CONFIG.BOT_NAME;
-    </script>
 
-<script>
-        // 🌟 Javascript สำหรับเปิด/ปิด และกดเลือก AI
+        // Script ควบคุม Dropdown โมเดล (ของเดิม)
         function toggleModelMenu(event) {
             event.stopPropagation();
             document.getElementById('model-popup-menu').classList.toggle('show');
         }
-
         function selectModel(value, shortName, element) {
-            // 1. เซฟค่าที่เลือกลงระบบ
             document.getElementById('ai-model-select').value = value;
-            // 2. เปลี่ยนชื่อบนปุ่ม
             document.getElementById('model-btn-text').innerText = shortName;
-            // 3. จัดการเครื่องหมายถูก (ลบอันเก่า ใส่ให้อันใหม่)
             document.querySelectorAll('.model-item').forEach(item => item.classList.remove('active'));
-            element.classList.add('active');
-            // 4. ปิดเมนู
+            if(element) element.classList.add('active');
             document.getElementById('model-popup-menu').classList.remove('show');
+            localStorage.setItem('ssmi_saved_model_value', value);
+            localStorage.setItem('ssmi_saved_model_name', shortName);
         }
-
-        // ถ้าคลิกที่ว่าง ให้เมนูปิดเองอัตโนมัติ
         document.addEventListener('click', function(event) {
             const popup = document.getElementById('model-popup-menu');
             const btn = document.getElementById('model-toggle-btn');
             if (popup.classList.contains('show') && !popup.contains(event.target) && !btn.contains(event.target)) {
                 popup.classList.remove('show');
+            }
+        });
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedValue = localStorage.getItem('ssmi_saved_model_value');
+            const savedName = localStorage.getItem('ssmi_saved_model_name');
+            if (savedValue && savedName) {
+                document.getElementById('ai-model-select').value = savedValue;
+                document.getElementById('model-btn-text').innerText = savedName;
+                document.querySelectorAll('.model-item').forEach(item => {
+                    item.classList.remove('active');
+                    if (item.getAttribute('onclick').includes("'" + savedValue + "'")) item.classList.add('active');
+                });
             }
         });
     </script>

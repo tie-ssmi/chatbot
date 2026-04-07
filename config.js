@@ -5,6 +5,6 @@ const CHATBOT_CONFIG = {
     API_URL: "https://script.google.com/macros/s/AKfycbz3ogdQbR2GUztgLG1TtpFbatCFCXVzgMK43j5zWdd0PQ1enAKCnjJWoyVjNDOzDoiRPg/exec",
     
     // ตั้งค่าอื่นๆ (ถ้ามีในอนาคต)
-    BOT_NAME: "ນ້ອງໄຂ່ | Nong Khai Chatbot",
+    BOT_NAME: "ນ້ອງໄຂ່ | Nong Khai",
     LANGUAGE: "lo-LA" 
 };
