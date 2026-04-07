@@ -52,8 +52,6 @@ body {
     flex-direction: column;
     flex: 1;
     min-height: 0;
-    padding-top: var(--header-height);
-    padding-bottom: var(--input-height);
     width: 100%;
 }
 
@@ -65,13 +63,10 @@ body {
     justify-content: space-between;
     align-items: center;
     gap: 10px;
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
     height: var(--header-height);
     z-index: 100;
     flex-shrink: 0;
+    position: relative;
 }
 
 .header-left { display: flex; align-items: center; }
@@ -147,10 +142,8 @@ body {
     border-top: 1px solid var(--border-color);
     gap: 10px;
     align-items: center;
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    flex-shrink: 0;
+    position: relative;
     z-index: 10;
 }
 .chat-input-area input {
@@ -239,11 +232,6 @@ body {
     .chat-header {
         padding-top: calc(14px + env(safe-area-inset-top));
         height: calc(var(--header-height) + env(safe-area-inset-top));
-    }
-
-    .chat-area {
-        padding-top: calc(var(--header-height) + env(safe-area-inset-top));
-        padding-bottom: calc(var(--input-height) + env(safe-area-inset-bottom));
     }
 
     .chat-input-area {
