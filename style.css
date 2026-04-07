@@ -16,6 +16,8 @@
     --border-color: #d6e3e9;
     --shadow-lg: 0 24px 60px rgba(15, 47, 64, 0.18);
     --shadow-md: 0 10px 24px rgba(15, 47, 64, 0.12);
+    --header-height: 80px;
+    --input-height: 84px;
 }
 
 body { 
@@ -29,13 +31,13 @@ body {
     display: flex; 
     justify-content: center; 
     align-items: center; 
-    height: 99vh;
+    min-height: 100vh;
    
 }
 
 .chat-container { 
     width: min(100%, 860px);
-    height: min(100vh, 840px);
+    height: min(96vh, 840px);
     background-color: var(--surface);
     border-radius: 22px;
     box-shadow: var(--shadow-lg);
@@ -45,7 +47,15 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.6);
     backdrop-filter: blur(6px);
 }
-
+.chat-area {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    padding-top: var(--header-height);
+    padding-bottom: var(--input-height);
+    width: 100%;
+}
 
 .chat-header { 
     background: var(--primary-color);
@@ -55,11 +65,11 @@ body {
     justify-content: space-between;
     align-items: center;
     gap: 10px;
-    position: fixed; /* 🌟 เปลี่ยนเป็น fixed ให้อยู่ในกรอบแชทเสมอ */
+    position: absolute;
     top: 0;
     left: 0;
     right: 0;
-
+    height: var(--header-height);
     z-index: 100;
     flex-shrink: 0;
 }
@@ -90,7 +100,8 @@ body {
 
 .chat-messages {
     flex-grow: 1;
-    padding: 30px 16px; /* เพิ่ม padding-top เป็น 30px เพื่อให้พ้นแถบหัวข้อ */
+    min-height: 0;
+    padding: 16px;
     overflow-y: auto;
     background: var(--background-color);
     scroll-behavior: smooth;
@@ -98,6 +109,7 @@ body {
     flex-direction: column;
     overflow-y: scroll; /* บังคับให้แสดง Scrollbar เสมอเพื่อรักษาความกว้างพื้นที่แชท */
     gap: 12px;
+    width: 100%;
 }
 .message {
     max-width: min(82%, 620px);
@@ -107,6 +119,7 @@ body {
     line-height: 1.55;
     word-wrap: break-word;
     animation: appearUp 0.24s ease;
+  
 }
 .bot-message {
     background-color: #ffffff;
@@ -115,6 +128,7 @@ body {
     border-bottom-left-radius: 4px;
     box-shadow: 0 4px 12px rgba(18, 62, 80, 0.06);
     border: 1px solid #e3edf1;
+    
 }
 .user-message {
     background: linear-gradient(145deg, var(--primary-color), var(--primary-strong));
@@ -122,19 +136,22 @@ body {
     align-self: flex-end;
     border-bottom-right-radius: 4px;
     box-shadow: var(--shadow-md);
+    
 }
 
 .chat-input-area {
     display: flex;
+    min-height: var(--input-height);
     padding: 14px 16px;
     background-color: white;
     border-top: 1px solid var(--border-color);
     gap: 10px;
     align-items: center;
-    position: fixed;
+    position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
+
 }
 .chat-input-area input {
     width: 30%;
@@ -187,45 +204,7 @@ body {
     align-items: center;
 }
 
-/* =========================================
-   🌟 CSS สำหรับแท็บเล็ตและมือถือ (ล็อกหน้าจอ 100% แก้ปัญหาขอบจม)
-   ========================================= */
 @media (max-width: 920px) {
-    html, body { 
-        padding: 0; 
-        margin: 0;
-        height: 100%;
-        width: 100%;
-        overflow: hidden; 
-        position: fixed; /* 🌟 ล็อกหน้าจอเด็ดขาด ป้องกันเบราว์เซอร์มือถือดันหน้าเว็บขึ้นลง */
-    }
-    
-    @supports (-webkit-touch-callout: none) {
-        /* 🌟 เวทมนตร์สำหรับ iOS Safari โดยเฉพาะ (ดึงหน้าจอให้พอดีเป๊ะ) */
-        html, body { height: -webkit-fill-available; }
-    }
-
-    .chat-container {
-        width: 100vw;
-        height: 100%;
-        max-height: 100%;
-        border-radius: 0;
-        border: none;
-        /* 🌟 หลบรอยแหว่งกล้องหน้า และ แถบโฮมด้านล่างของมือถือ */
-        padding-top: env(safe-area-inset-top); 
-        padding-bottom: env(safe-area-inset-bottom); 
-        padding-left: env(safe-area-inset-left);
-        padding-right: env(safe-area-inset-right);
-        display: flex;
-        flex-direction: column;
-    }
-}
-
-/* =========================================
-   🌟 CSS สำหรับแท็บเล็ตและมือถือ (ล็อกหน้าจอเด็ดขาด + แก้ขอบจม)
-   ========================================= */
-@media (max-width: 920px) {
-    /* 🌟 เวทมนตร์แก้ปัญหาความสูงบน Safari มือถือ (-webkit-fill-available) */
     html, body {
         margin: 0;
         padding: 0;
@@ -235,7 +214,11 @@ body {
         overflow: hidden;
     }
 
-    body { display: flex; flex-direction: column; }
+    body {
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+    }
 
     .chat-container {
         width: 100vw;
@@ -249,6 +232,22 @@ body {
         flex-direction: column;
         margin: 0;
         box-sizing: border-box;
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
+
+    .chat-header {
+        padding-top: calc(14px + env(safe-area-inset-top));
+        height: calc(var(--header-height) + env(safe-area-inset-top));
+    }
+
+    .chat-area {
+        padding-top: calc(var(--header-height) + env(safe-area-inset-top));
+        padding-bottom: calc(var(--input-height) + env(safe-area-inset-bottom));
+    }
+
+    .chat-input-area {
+        padding-bottom: calc(14px + env(safe-area-inset-bottom));
     }
 }
 
@@ -265,13 +264,24 @@ body {
     .voice-toggle { padding: 6px; margin: 0; }
     .voice-toggle span { display: none; }
     .voice-toggle { padding: 6px 8px; }
-    .logout-btn { font-size: 0.75rem; padding: 6px 9px; }
+    .header-actions .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+        padding: 0;
+        gap: 0;
+        border-radius: 50%;
+        font-size: 0;
+    }
+    .header-actions .button .button__icon-wrapper {
+        width: 22px;
+        height: 22px;
+    }
     .chat-messages { padding: 14px; }
     .message { max-width: 90%; font-size: 0.92rem; }
-    .chat-input-area small {  position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%; }
     .chat-input-area { padding: 10px; }
     .chat-input-area input { font-size: 0.93rem; }
     .action-btn { width: 42px; height: 42px; border-radius: 12px; }
@@ -283,15 +293,14 @@ body {
 @media (min-width: 1024px) {
     body { padding: 24px; }
     .chat-container {
-        width: min(100%, 820px);
-        height: min(88vh, 820px);
+        width: min(100%, 980px);
+        height: min(92vh, 860px);
         border-radius: 24px;
-        padding-left: 280px; /* 🌟 เว้นพื้นที่ด้านซ้าย 280px ให้ Sidebar เสียบเข้าไป! */
     }
     .chat-input-area input { font-size: 0.9rem; padding: 10px; }
     .action-btn { width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; }
 
-    .chat-sidebar { width: 85%; max-width: 320px; }
+    .chat-sidebar { width: 300px; max-width: 88%; }
 }
 /* 🌟 CSS สำหรับ Modal ซูมรูปภาพ */
 .image-modal {
@@ -522,4 +531,62 @@ body {
     border-left: 4px solid var(--primary-color); 
     border-top-left-radius: 2px;
     border-bottom-left-radius: 2px;
+}
+
+/* From Uiverse.io by Creatlydev */
+.button {
+    line-height: 1;
+    text-decoration: none;
+    display: inline-flex;
+    border: none;
+    cursor: pointer;
+    align-items: center;
+    gap: 0.75rem;
+    background-color: var(--clr);
+    color: #fff;
+    border-radius: 10rem;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    padding-left: 20px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background-color 0.3s;
+    font-family: 'Noto Sans Lao', sans-serif;
+}
+
+.button__icon-wrapper {
+    flex-shrink: 0;
+    width: 25px;
+    height: 25px;
+    position: relative;
+    color: var(--clr);
+    background-color: #fff;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+}
+
+.button:hover {
+    background-color: #5132fd;
+}
+
+.button:hover .button__icon-wrapper {
+    color: #000;
+}
+
+.button__icon-svg--copy {
+    position: absolute;
+    transform: translate(-150%, 150%);
+}
+
+.button:hover .button__icon-svg:first-child {
+    transition: transform 0.3s ease-in-out;
+    transform: translate(150%, -150%);
+}
+
+.button:hover .button__icon-svg--copy {
+    transition: transform 0.3s ease-in-out 0.1s;
+    transform: translate(0);
 }
