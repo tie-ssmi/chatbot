@@ -31,7 +31,7 @@ body {
     display: flex; 
     justify-content: center; 
     align-items: center; 
-    min-height: 100vh;
+    height:99vh;
    
 }
 
@@ -53,6 +53,8 @@ body {
     flex: 1;
     min-height: 0;
     width: 100%;
+    height: calc(100% - var(--header-height) - var(--input-height));
+    padding-bottom: var(--input-height);
 }
 
 .chat-header { 
@@ -136,15 +138,19 @@ body {
 
 .chat-input-area {
     display: flex;
-    min-height: var(--input-height);
+    height: var(--input-height);
     padding: 14px 16px;
     background-color: white;
     border-top: 1px solid var(--border-color);
     gap: 10px;
     align-items: center;
     flex-shrink: 0;
-    position: relative;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+
     z-index: 10;
+
 }
 .chat-input-area input {
     width: 30%;
