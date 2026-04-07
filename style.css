@@ -180,33 +180,66 @@ body {
     align-items: center;
 }
 
+/* =========================================
+   🌟 CSS สำหรับแท็บเล็ตและมือถือ (ล็อกหน้าจอ 100% แก้ปัญหาขอบจม)
+   ========================================= */
 @media (max-width: 920px) {
-    body { padding: 0; }
+    html, body { 
+        padding: 0; 
+        margin: 0;
+        height: 100%;
+        width: 100%;
+        overflow: hidden; 
+        position: fixed; /* 🌟 ล็อกหน้าจอเด็ดขาด ป้องกันเบราว์เซอร์มือถือดันหน้าเว็บขึ้นลง */
+    }
+    
+    @supports (-webkit-touch-callout: none) {
+        /* 🌟 เวทมนตร์สำหรับ iOS Safari โดยเฉพาะ (ดึงหน้าจอให้พอดีเป๊ะ) */
+        html, body { height: -webkit-fill-available; }
+    }
+
     .chat-container {
         width: 100vw;
-        height: 100vh;
-        max-height: none;
+        height: 100%;
+        max-height: 100%;
         border-radius: 0;
         border: none;
+        /* 🌟 หลบรอยแหว่งกล้องหน้า และ แถบโฮมด้านล่างของมือถือ */
+        padding-top: env(safe-area-inset-top); 
+        padding-bottom: env(safe-area-inset-bottom); 
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+        display: flex;
+        flex-direction: column;
     }
 }
 
 @media (max-width: 560px) {
-    .chat-header { padding: 12px; }
-    #bot-title { font-size: 0.92rem; }
-    .header-actions { gap: 6px; }
+    /* จัดระเบียบ Header บนมือถือ */
+    .chat-header { padding: 10px; flex-shrink: 0; }
+    .header-left { gap: 6px; }
+    .bot-logo { width: 34px; height: 34px; margin-right: 0; }
+    #bot-title { font-size: 0.95rem; white-space: nowrap; }
+    
+    /* ซ่อนคำอธิบายยาวๆ บนมือถือ */
+    .header-text small:nth-child(2) { display: none; }
+    
+    .header-actions { gap: 4px; flex-shrink: 0; }
+    #user-display-name { max-width: 65px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 4px 6px; font-size: 0.75rem; }
+    .voice-toggle { padding: 5px; }
     .voice-toggle span { display: none; }
-    .voice-toggle { padding: 6px 8px; }
-    .logout-btn { font-size: 0.75rem; padding: 6px 9px; }
-    .chat-messages { padding: 14px; }
-    .message { max-width: 90%; font-size: 0.92rem; }
-    .chat-input-area small {  position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%; }
-    .chat-input-area { padding: 10px; }
-    .chat-input-area input { font-size: 0.93rem; }
-    .action-btn { width: 42px; height: 42px; border-radius: 12px; }
+    .logout-btn { font-size: 0.75rem; padding: 5px 8px; }
+    
+    /* จัดพื้นที่แชท */
+    .chat-messages { padding: 12px; flex-grow: 1; overflow-y: auto; }
+    .message { max-width: 94%; font-size: 0.9rem; padding: 10px 12px; }
+    
+    /* ล็อกกล่องพิมพ์แชทด้านล่างสุด */
+    .chat-input-area { padding: 10px 8px; flex-shrink: 0; }
+    .chat-input-area input { font-size: 0.9rem; padding: 10px; }
+    .action-btn { width: 40px; height: 40px; border-radius: 10px; }
+    
+    .chat-sidebar { width: 85%; max-width: 320px; }
 }
 
 /* =========================================
