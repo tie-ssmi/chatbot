@@ -18,6 +18,17 @@
     </script>
 
     <div class="chat-container">
+        <div id="sidebar-backdrop" class="sidebar-backdrop" onclick="toggleSidebar()"></div>
+        <div id="chat-sidebar" class="chat-sidebar">
+            <button class="new-chat-btn" onclick="startNewChat()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                ສ້າງແຊທໃໝ່ (New Chat)
+            </button>
+            <div class="thread-list-title">ປະຫວັດການສົນທະນາ</div>
+            <div id="thread-list-container" class="thread-list-container">
+                </div>
+        </div>
+
         <div class="chat-header">
             <div class="header-left">
                 <button class="menu-btn" onclick="toggleSidebar()">
