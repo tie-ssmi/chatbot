@@ -1,5 +1,9 @@
 /* --- style.css --- */
-
+* {
+    box-sizing: border-box;
+    padding: 0px;
+    margin: 0px;
+}
 :root {
     --primary-color: #176b8a;
     --primary-strong: #0f4f67;
@@ -25,7 +29,7 @@ body {
     display: flex; 
     justify-content: center; 
     align-items: center; 
-    min-height: 100vh;
+    height: 99vh;
    
 }
 
@@ -51,7 +55,11 @@ body {
     justify-content: space-between;
     align-items: center;
     gap: 10px;
-    position: relative; /* 🌟 เปลี่ยนเป็น relative ให้อยู่ในกรอบแชทเสมอ */
+    position: fixed; /* 🌟 เปลี่ยนเป็น fixed ให้อยู่ในกรอบแชทเสมอ */
+    top: 0;
+    left: 0;
+    right: 0;
+
     z-index: 100;
     flex-shrink: 0;
 }
@@ -123,7 +131,10 @@ body {
     border-top: 1px solid var(--border-color);
     gap: 10px;
     align-items: center;
-
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
 }
 .chat-input-area input {
     width: 30%;
@@ -266,12 +277,16 @@ body {
     .action-btn { width: 42px; height: 42px; border-radius: 12px; }
 }
 
-@media (min-width: 1200px) {
+/* =========================================
+   🌟 CSS สำหรับหน้าจอคอมพิวเตอร์ (Desktop Mode แบบ Gemini)
+   ========================================= */
+@media (min-width: 1024px) {
     body { padding: 24px; }
     .chat-container {
         width: min(100%, 820px);
         height: min(88vh, 820px);
         border-radius: 24px;
+        padding-left: 280px; /* 🌟 เว้นพื้นที่ด้านซ้าย 280px ให้ Sidebar เสียบเข้าไป! */
     }
     .chat-input-area input { font-size: 0.9rem; padding: 10px; }
     .action-btn { width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; }
