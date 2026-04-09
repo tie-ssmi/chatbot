@@ -347,7 +347,7 @@ async function sendMessage() {
             appendMessage(formattedError, 'bot-message', null, true);
             
             // 🌟 ถ้าติดโควตาให้ล็อกเป็นป้ายไฟเลื่อนทันที!
-            if (data.error.includes("ໂຄວຕາ")) {
+            if (data.error.includes("ໂກຕ້າ")) {
                 const flatErrorMsg = data.error.replace(/\n/g, '   |   ');
                 lockInputWithMarquee(`🔒 ${flatErrorMsg}`);
             }
@@ -396,7 +396,7 @@ async function checkQuotaOnLoad() {
             const msg = data.message.replace(/\n/g, '<br>');
             appendMessage(msg, 'bot-message', 'quota-warning', true);
             
-            const marqueeText = `🔒 ຕິດໂຄວຕາການນຳໃຊ້! ທ່ານສາມາດຖາມໄດ້ອີກຄັ້ງເວລາ ${data.timeString} ໂມງ (ອີກ ${data.remainString})`;
+            const marqueeText = `🔒ໂກຕ້າຂອງທ່ານໝົດແລ້ວ ຈະນຳໃຊ້ໄດ້ອີກຄັ້ງຫຼັງ ${data.timeString} ໂມງ (ອີກ ${data.remainString})`;
             lockInputWithMarquee(marqueeText);
         }
     } catch(e) { console.log("Quota check failed", e); }
