@@ -282,54 +282,9 @@ function clearFiles() {
     if(tagsContainer) tagsContainer.innerHTML = '';
 }
 
-const GREETING_PATTERNS = [
-    /^hi$/i,
-    /^hello$/i,
-    /^hey$/i,
-    /^good\s*morning$/i,
-    /^ສະບາຍດີ$/,
-    /^ເຮ$/
-];
-
-function isGreetingMessage(text) {
-    const normalized = (text || '').trim();
-    return GREETING_PATTERNS.some(pattern => pattern.test(normalized));
-}
-
-function closeGreetingVideo() {
-    const videoModal = document.getElementById('video-greeting-modal');
-    const greetingVideo = document.getElementById('greeting-video');
-    if (!videoModal || !greetingVideo) return;
-    greetingVideo.pause();
-    greetingVideo.currentTime = 0;
-    videoModal.style.display = 'none';
-}
-
-function showGreetingVideoPopup() {
-    const videoModal = document.getElementById('video-greeting-modal');
-    const greetingVideo = document.getElementById('greeting-video');
-    if (!videoModal || !greetingVideo) return;
-
-    videoModal.style.display = 'flex';
-    greetingVideo.currentTime = 0;
-    greetingVideo.play().catch(() => {
-        // Ignore playback blocking to keep chat flow stable.
-    });
-
-    setTimeout(() => {
-        closeGreetingVideo();
-    }, 8000);
-}
-
 async function sendMessage() {
     const text = userInput.value.trim();
     if (!text && currentFiles.length === 0) return;
-
-    if (isGreetingMessage(text) && currentFiles.length === 0) {
-        showGreetingVideoPopup();
-        userInput.value = '';
-        return;
-    }
 
     let userDisplayHtml = text;
     if (currentFiles.length > 0) {
@@ -387,7 +342,6 @@ async function sendMessage() {
             
             // สั่งโหลดแถบเมนูใหม่
             loadChatThreads();
-            toggleInput(true);
         } else if (data.error) {    
             const formattedError = data.error.replace(/\n/g, '<br>');
             appendMessage(formattedError, 'bot-message', null, true);
@@ -493,83 +447,13 @@ if (SpeechRecognition) {
 }
 
 async function toggleMic() {
-    // iOS Safari does not support Web Speech API — use MediaRecorder fallback
-    if (!recognition) {
-        await toggleMicFallback();
-        return;
-    }
-    if (isRecording) { recognition.stop(); return; }
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach(track => track.stop());
-        recognition.start();
-    } catch (err) { alert("⚠️ ບໍ່ສາມາດເປີດໄມໂຄຣໂຟນໄດ້!"); }
-}
-
-async function toggleMicFallback() {
-    // Stop recording if already in progress
-    if (isRecordingFallback) {
-        if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-        return;
-    }
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert("⚠️ Browser ຂອງທ່ານບໍ່ຮອງຮັບໄມໂຄຣໂຟນ");
-        return;
-    }
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        // iOS Safari only supports audio/mp4; Chrome supports audio/webm
-        const mimeType = (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm'))
-            ? 'audio/webm'
-            : 'audio/mp4';
-        recordedChunks = [];
-        mediaRecorder = new MediaRecorder(stream, { mimeType });
-        mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
-        mediaRecorder.onstop = async () => {
-            isRecordingFallback = false;
-            micBtn.classList.remove('recording');
-            stream.getTracks().forEach(t => t.stop());
-            const blob = new Blob(recordedChunks, { type: mimeType });
-            recordedChunks = [];
-            const reader = new FileReader();
-            reader.onloadend = async () => {
-                const base64Data = reader.result.split(',')[1];
-                micBtn.disabled = true;
-                micBtn.style.opacity = '0.5';
-                micBtn.title = 'ກຳລັງຖອດສຽງ...';
-                try {
-                    const resp = await fetch(CHATBOT_CONFIG.API_URL, {
-                        method: 'POST',
-                        body: JSON.stringify({
-                            action: 'transcribe',
-                            base64Audio: base64Data,
-                            mimeType: mimeType,
-                            userId: localStorage.getItem('ssmi_user_id') || 'Unknown'
-                        }),
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-                    });
-                    const data = await resp.json();
-                    if (data.transcript) {
-                        userInput.value = data.transcript;
-                        userInput.focus();
-                    } else {
-                        alert('⚠️ ຖອດສຽງບໍ່ສຳເລັດ, ກາລຸນາລອງໃໝ່');
-                    }
-                } catch (e) {
-                    alert('⚠️ ເກີດຂໍ້ຜິດພາດໃນການຖອດສຽງ');
-                } finally {
-                    micBtn.disabled = false;
-                    micBtn.style.opacity = '1';
-                    micBtn.title = '';
-                }
-            };
-            reader.readAsDataURL(blob);
-        };
-        mediaRecorder.start();
-        isRecordingFallback = true;
-        micBtn.classList.add('recording');
-    } catch (err) {
-        alert('⚠️ ບໍ່ສາມາດເປີດໄມໂຄຣໂຟນໄດ້! ກາລຸນາອະນຸຍາດການເຂົ້າເຖິງໄມໂຄຣໂຟນໃນ Settings');
+    if (recognition) {
+        if (isRecording) { recognition.stop(); return; }
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(track => track.stop());
+            recognition.start();
+        } catch (err) { alert("⚠️ ບໍ່ສາມາດເປີດໄມໂຄຣໂຟນໄດ້!"); }
     }
 }
 

@@ -23,16 +23,9 @@ function doPost(e) {
     // 🌟 เพิ่มระบบดึงรายชื่อห้องแชททั้งหมด
     if (action === "checkQuota") {
       var quota = checkUserQuotaLogic(requestData.userId);
-      return createJsonResponse({ 
-          isLimited: quota.isLimited, 
-          message: quota.errorMsg || "",
-          timeString: quota.timeString || "",
-          remainString: quota.remainString || ""
-      });
+      return createJsonResponse({ isLimited: quota.isLimited, message: quota.errorMsg || "" });
     }
     if (action === "getThreads") return getChatThreads(requestData.userId);
-
-    if (action === "transcribe") return handleAudioTranscription(requestData.base64Audio, requestData.mimeType);
 
     if (action === "chat") {
       var userMessage = requestData.message;
@@ -42,35 +35,61 @@ function doPost(e) {
       var sessionId = requestData.sessionId || "MAIN_SESSION"; 
       
       // ==========================================
-      // 🌟 ລະບົບຈຳກັດການຖາມ (Rate Limit) ແບບໃໝ່
+      // 🌟 ລະບົບຈຳກັດການຖາມ (Rate Limit: 10 ຂໍ້ / 4 ຊົ່ວໂມງ)
       // ==========================================
-      var quotaCheck = checkUserQuotaLogic(userId);
-      if (quotaCheck.isLimited) {
-          return createJsonResponse({ error: quotaCheck.errorMsg });
-      } else {
-          quotaCheck.history.push(new Date().getTime());
-          quotaCheck.cache.put(quotaCheck.limitKey, JSON.stringify(quotaCheck.history), 21600);
-      }
-      // ==========================================
+      var rateLimitCache = CacheService.getScriptCache();
+      var limitKey = "LIMIT_" + userId;
+      var limitData = rateLimitCache.get(limitKey);
+      var askHistory = limitData ? JSON.parse(limitData) : [];
+      
+      var now = new Date().getTime();
+      var waitTimeHours = 4; // กำหนดจำนวนชั่วโมงตรงนี้
+      var windowMs = waitTimeHours * 60 * 60 * 1000;
+      var timeLimitAgo = now - windowMs;
 
+      // 1. กรองเอาเฉพาะประวัติการถามในช่วงเวลาที่กำหนด
+      askHistory = askHistory.filter(function(time) { return time > timeLimitAgo; });
+
+      // 2. เช็คว่าถามครบ 10 ข้อหรือยัง?
+      if (askHistory.length >= 3) {
+          // 🌟 คำนวณเวลาที่จะปลดล็อก (เอาเวลาของคำถามแรกสุดในรอบนี้ + 4 ชั่วโมง)
+          var oldestAskTime = Math.min.apply(null, askHistory);
+          var unlockTimeMs = oldestAskTime + windowMs;
+          var unlockDate = new Date(unlockTimeMs);
+          
+          // แปลงเป็นเวลา HH:mm (ใช้ Timezone ของ Google Script เพื่อความแม่นยำ)
+          var timeString = Utilities.formatDate(unlockDate, Session.getScriptTimeZone(), "HH:mm");
+          
+          // คำนวณเวลาที่เหลือ (ชั่วโมง / นาที)
+          var diffMs = unlockTimeMs - now;
+          var diffMins = Math.floor(diffMs / 60000);
+          var remHours = Math.floor(diffMins / 60);
+          var remMins = diffMins % 60;
+          
+          var remainString = "";
+          if (remHours > 0) remainString = remHours + " ຊົ່ວໂມງ " + remMins + " ນາທີ";
+          else remainString = remMins + " ນາທີ";
+
+          // ส่งข้อความแจ้งเตือนแบบละเอียดยิบ
+          var errorMsg = "⚠️ ທ່ານໃຊ້ໂຄວຕາຄຳຖາມຄົບແລ້ວ (10 ຂໍ້ / " + waitTimeHours + " ຊົ່ວໂມງ).\\n⏳ ສາມາດຖາມໄດ້ອີກຄັ້ງໃນເວລາ " + timeString + " ໂມງ (ອີກປະມານ " + remainString + ").";
+          
+          return createJsonResponse({ error: errorMsg });
+      }
+
+      // 3. ถ้ายังไม่ครบ ให้บันทึก "เวลาปัจจุบัน" เพิ่มเข้าไปในประวัติ
+      askHistory.push(now);
+      rateLimitCache.put(limitKey, JSON.stringify(askHistory), 21600); // บันทึก Cache ไว้ 6 ชั่วโมง
+      // ==========================================
       var lowMsg = userMessage.toLowerCase().trim();
       var quickReply = null;
-      
-      // 1. ดักคำทักทาย
       if (/^h+e+l+o+$|^hi+$|ສະບາຍດີ|สบายดี|sabaidee/i.test(lowMsg)) {
         quickReply = "ສະບາຍດີ! ຂ້ອຍແມ່ນ SINA ຜູ້ຊ່ວຍຂອງ SSMI, ມີຫຍັງໃຫ້ຊ່ວຍໃນມື້ນີ້ບໍ່?";
-      } 
-      // 2. ดักคำขอบคุณ
-      else if (/thank\s*you|^thanks$|^thx$|ຂອບໃຈ/i.test(lowMsg)) {
+      } else if (/thank\s*you|^thanks$|^thx$|ຂອບໃຈ/i.test(lowMsg)) {
         quickReply = "ຍິນດີສະເໝີ! ຖ້າມີຄຳຖາມກ່ຽວກັບລະບຽບການ ຖາມ SINA ໄດ້ຕະຫຼອດເລີຍເດີ້.";
       }
-      // 🌟 3. ดักข้อความสั้นเกินไป (ความยาวไม่เกิน 2 ตัวอักษร)
-      else if (lowMsg.length <= 2) {
-        quickReply = "ຂໍອະໄພ, ຂໍ້ຄວາມຂອງທ່ານສັ້ນເກີນໄປ. ກະລຸນາພິມຄຳຖາມໃຫ້ຊັດເຈນກວ່ານີ້ ເພື່ອໃຫ້ SINA ສາມາດຄົ້ນຫາລະບຽບການທີ່ຖືກຕ້ອງໃຫ້ໄດ້ເດີ້.";
-      }
-
+      
       if (quickReply && (!requestData.files || requestData.files.length === 0)) {
-        logToSheet(userId, userName, userMessage, quickReply, "QuickReply", "", sessionId, 0);
+        logToSheet(userId, userName, userMessage, quickReply, "QuickReply", "", sessionId);
         return createJsonResponse({ reply: quickReply });
       }
 
@@ -86,15 +105,8 @@ function doPost(e) {
       };
       var currentAiName = tabMappingLao[selectedCategory] || "AI ບຸກຄະລາກອນ (HR)";
 
-      // 1. ດຶງຂໍ້ມູນທັງຫມົດຈາກ Docs
-      var fullKnowledgeContext = getKnowledgeByCategory(selectedCategory);
-      if (!fullKnowledgeContext) return createJsonResponse({ error: "ຂໍອະໄພ, ບໍ່ພົບຂໍ້ມູນລະບຽບໃນໝວດໝູ່ນີ້" });
-
-      // 🌟 2. ໃຊ້ລະບົບ RAG ກອງສະເພາະຍ່ອຫົວທີ່ກ່ຽວຂ້ອງ
-      var knowledgeContext = extractRelevantContext(fullKnowledgeContext, userMessage);
-      if (!knowledgeContext) {
-          knowledgeContext = fullKnowledgeContext.substring(0, 3500);
-      }
+      var knowledgeContext = getKnowledgeByCategory(selectedCategory);
+      if (!knowledgeContext) return createJsonResponse({ error: "ຂໍອະໄພ, ບໍ່ພົບຂໍ້ມູນລະບຽບໃນໝວດໝູ່ນີ້" });
 
       var historyContext = buildHistoryTextFromClient(clientHistory);
       if (!historyContext) historyContext = getRecentHistoryText(userId, sessionId);
@@ -161,13 +173,9 @@ Example response format: "ຄຳຖາມນີ້ເບິ່ງຄືວ່າ
 
       var aiReply = null;
       var lastError = "";
-      var usedTokens = 0;
 
       if (responseData.candidates && responseData.candidates.length > 0) {
         aiReply = responseData.candidates[0].content.parts[0].text;
-        if (responseData.usageMetadata && responseData.usageMetadata.totalTokenCount) {
-            usedTokens = responseData.usageMetadata.totalTokenCount;
-        }
       } else {
         lastError = JSON.stringify(responseData);
       }
@@ -175,10 +183,10 @@ Example response format: "ຄຳຖາມນີ້ເບິ່ງຄືວ່າ
       var logFileUrls = savedFileUrls.length > 0 ? savedFileUrls.join(" \n ") : "";
 
       if (aiReply) {
-        logToSheet(userId, userName, userMessage, aiReply, "Success", logFileUrls, sessionId, usedTokens); 
+        logToSheet(userId, userName, userMessage, aiReply, "Success", logFileUrls, sessionId); 
         return createJsonResponse({ reply: aiReply });
       } else {
-        logToSheet(userId, userName, userMessage, lastError, "Error", logFileUrls, sessionId, 0);
+        logToSheet(userId, userName, userMessage, lastError, "Error", logFileUrls, sessionId);
         return createJsonResponse({ error: "AI ບໍ່ສາມາດສ້າງຄຳຕອບໄດ້: " + lastError.substring(0, 50) });
       }
     }
@@ -190,11 +198,11 @@ Example response format: "ຄຳຖາມນີ້ເບິ່ງຄືວ່າ
 // ==========================================
 // 🌟 2. Database & Utils (เพิ่มระบบ Session ID)
 // ==========================================
-// บันทึกลง Sheet ช่องที่ 9 (Column I) รวม usedTokens
-function logToSheet(userId, userName, question, answer, status, imageUrl, sessionId, usedTokens) { 
+// บันทึกลง Sheet ช่องที่ 8 (Column H)
+function logToSheet(userId, userName, question, answer, status, imageUrl, sessionId) { 
   try {
     var sheet = SpreadsheetApp.openById(GOOGLE_SHEET_ID).getSheetByName(LOG_SHEET_NAME);
-    if(sheet) sheet.appendRow([new Date(), userId, userName, question, answer, status, imageUrl || "", sessionId || "MAIN_SESSION", usedTokens || 0]);
+    if(sheet) sheet.appendRow([new Date(), userId, userName, question, answer, status, imageUrl || "", sessionId || "MAIN_SESSION"]);
   } catch (e) {}
 }
 
@@ -341,41 +349,6 @@ function saveFileToDrive(base64, mimeType, userId, index) {
   } catch (e) { return "ERROR: " + e.toString(); }
 }
 
-// ==========================================
-// ✅ Audio Transcription (iOS Mic Fallback)
-// ==========================================
-function handleAudioTranscription(base64Audio, mimeType) {
-  try {
-    var activeApiKey = GEMINI_API_KEYS[0];
-    var url = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent?key=" + activeApiKey;
-    var payload = {
-      "contents": [{
-        "role": "user",
-        "parts": [
-          { "text": "Transcribe this audio exactly as spoken. Output only the transcribed text with no extra commentary, no quotation marks, and no formatting." },
-          { "inlineData": { "mimeType": mimeType, "data": base64Audio } }
-        ]
-      }],
-      "generationConfig": { "temperature": 0, "maxOutputTokens": 1000 }
-    };
-    var options = {
-      "method": "post",
-      "contentType": "application/json",
-      "payload": JSON.stringify(payload),
-      "muteHttpExceptions": true
-    };
-    var response = UrlFetchApp.fetch(url, options);
-    var responseData = JSON.parse(response.getContentText());
-    if (responseData.candidates && responseData.candidates[0] && responseData.candidates[0].content) {
-      var transcript = responseData.candidates[0].content.parts[0].text.trim();
-      return createJsonResponse({ transcript: transcript });
-    }
-    return createJsonResponse({ error: "ຖອດສຽງບໍ່ສຳເລັດ" });
-  } catch (err) {
-    return createJsonResponse({ error: "ເກີດຂໍ້ຜິດພາດ: " + err.toString() });
-  }
-}
-
 function handleLogin(username, password) {
   try {
     var sheet = SpreadsheetApp.openById(GOOGLE_SHEET_ID).getSheetByName(USER_SHEET_NAME);
@@ -426,78 +399,4 @@ function getRecentLogRows(sheet, maxRows, columnCount) {
   }
   var startRow = Math.max(2, lastRow - maxRows + 1);  
   return sheet.getRange(startRow, 1, lastRow - startRow + 1, columnCount).getValues();
-}
-
-// ==========================================
-// 🌟 ຟັງຊັນກາງສຳລັບກວດສອບໂຄວຕາ (Rate Limit Logic)
-// ==========================================
-function checkUserQuotaLogic(userId) {
-  var rateLimitCache = CacheService.getScriptCache();
-  var limitKey = "LIMIT_" + userId;
-  var limitData = rateLimitCache.get(limitKey);
-  var askHistory = limitData ? JSON.parse(limitData) : [];
-  
-  var now = new Date().getTime();
-  var waitTimeHours = 2;
-  var windowMs = waitTimeHours * 60 * 60 * 1000;
-  var timeLimitAgo = now - windowMs;
-
-  askHistory = askHistory.filter(function(time) { return time > timeLimitAgo; });
-
-  if (askHistory.length >= 10) {
-      var oldestAskTime = Math.min.apply(null, askHistory);
-      var unlockTimeMs = oldestAskTime + windowMs;
-      var unlockDate = new Date(unlockTimeMs);
-      var timeString = Utilities.formatDate(unlockDate, Session.getScriptTimeZone(), "HH:mm");
-      
-      var diffMs = unlockTimeMs - now;
-      var diffMins = Math.floor(diffMs / 60000);
-      var remHours = Math.floor(diffMins / 60);
-      var remMins = diffMins % 60;
-      
-      var remainString = remHours > 0 ? (remHours + " ຊົ່ວໂມງ " + remMins + " ນາທີ") : (remMins + " ນາທີ");
-      var errorMsg = "⚠️ ທ່ານໃຊ້ໂຄວຕາຄຳຖາມຄົບແລ້ວ (10 ຂໍ້ / " + waitTimeHours + " ຊົ່ວໂມງ).\n⏳ ສາມາດຖາມໄດ້ອີກຄັ້ງໃນເວລາ " + timeString + " ໂມງ (ອີກປະມານ " + remainString + ").";
-      
-      return { 
-          isLimited: true, 
-          errorMsg: errorMsg, 
-          timeString: timeString, 
-          remainString: remainString 
-      };
-  }
-  return { isLimited: false, history: askHistory, cache: rateLimitCache, limitKey: limitKey };
-}
-
-// ==========================================
-// 🌟 ຟັງຊັນ RAG ຄົ້ນຫາສະເພາະຍ່ອຫົວທີ່ກ່ຽວຂ້ອງ
-// ==========================================
-function extractRelevantContext(fullText, userMessage) {
-  if (!fullText) return null;
-
-  var questionWords = ["ແນວໃດ", "ແມ່ນຫຍັງ", "ເທົ່າໃດ", "ຈັກມື້", "ໄດ້ບໍ່", "ອະທິບາຍ", "ກ່ຽວກັບ", "ຊ່ວຍ", "ບອກ", "ຂໍຖາມ", "ພີ່ຄຮັບ", "ຊ່ວຍແດ່"];
-  var searchWord = userMessage.toLowerCase();
-  for (var i = 0; i < questionWords.length; i++) {
-     searchWord = searchWord.replace(new RegExp(questionWords[i], "g"), "");
-  }
-  searchWord = searchWord.trim();
-
-  if (searchWord.length < 2) return fullText.substring(0, 3000);
-
-  var paragraphs = fullText.split(/\n/);
-  var matchedChunks = [];
-
-  for (var j = 0; j < paragraphs.length; j++) {
-     var p = paragraphs[j].trim();
-     if (p.length < 15) continue;
-
-     if (p.toLowerCase().includes(searchWord)) {
-         var prev = (j > 0) ? paragraphs[j-1].trim() : "";
-         var next = (j < paragraphs.length - 1) ? paragraphs[j+1].trim() : "";
-         matchedChunks.push(prev + "\n" + p + "\n" + next);
-     }
-  }
-
-  if (matchedChunks.length === 0) return null;
-
-  return matchedChunks.slice(0, 4).join("\n\n--- (ຂ້າມເນື້ອຫາບາງສ່ວນ) ---\n\n");
 }
