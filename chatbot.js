@@ -15,11 +15,11 @@ if (!currentSessionId) {
 
 window.onload = function() {
     if (!localStorage.getItem('ssmi_user_id')) {
-        window.location.href = 'login.html';
+        if (!window.location.href.includes('login.html')) window.location.href = 'login.html';
     } else {
-        showChat();
-        loadChatThreads(); // โหลดแถบเมนูด้านซ้าย
-        loadChatHistory(); // โหลดประวัติแชทห้องปัจจุบัน
+        if (document.getElementById('chat-app')) showChat();
+        loadChatHistory();
+        checkQuotaOnLoad(); // 🌟 ເພີ່ມຄຳສັ່ງກວດໂຄວຕາຕອນເປີດເວັບ!
         const userName = localStorage.getItem('ssmi_user_name');
         if (userName) document.getElementById('user-display-name').innerText = '👤 ' + userName;
     }
@@ -61,7 +61,7 @@ function startNewChat() {
     historyOffset = 0;
     
     // พ่นคำทักทายตั้งต้น
-    const welcomeHtml = `ສະບາຍດີ! ຂ້ອຍແມ່ນ ນ້ອງໄຂ່ ຜູ້ຊ່ວຍ ຕອບຄຳຖາມທຸກຢ່າງ ຂອງ ສິນຊັບເມືອງເໜືອ.<br><br>
+    const welcomeHtml = `ສະບາຍດີ! ຂ້ອຍແມ່ນ SINA ຜູ້ຊ່ວຍ ຕອບຄຳຖາມທຸກຢ່າງ ຂອງ ສິນຊັບເມືອງເໜືອ.<br><br>
                 ທ່ານສາມາດພິມຄຳຖາມ, <b>ແນບເອກະສານ (PDF/ຮູບ)</b> ຫຼື <b>ກົດປຸ່ມໄມໂຄຣໂຟນ</b> ເພື່ອເວົ້າຖາມຂ້ອຍໄດ້ເລີຍ!`;
     appendMessage(welcomeHtml, 'bot-message', 'welcome-message', true);
     
@@ -215,7 +215,7 @@ async function loadChatHistory(isLoadMore = false) {
         } else if (!isLoadMore) {
             // ถ้าเป็นแชทใหม่เอี่ยม ให้โชว์ข้อความต้อนรับ
             chatMessages.innerHTML = ''; // Clear All
-            const welcomeHtml = `ສະບາຍດີ! ຂ້ອຍແມ່ນ ນ້ອງໄຂ່ ຜູ້ຊ່ວຍ ຕອບຄຳຖາມທຸກຢ່າງ ຂອງ ສິນຊັບເມືອງເໜືອ.<br><br>
+            const welcomeHtml = `ສະບາຍດີ! ຂ້ອຍແມ່ນ SINA ຜູ້ຊ່ວຍ ຕອບຄຳຖາມທຸກຢ່າງ ຂອງ ສິນຊັບເມືອງເໜືອ.<br><br>
                 ທ່ານສາມາດພິມຄຳຖາມ, <b>ແນບເອກະສານ (PDF/ຮູບ)</b> ຫຼື <b>ກົດປຸ່ມໄມໂຄຣໂຟນ</b> ເພື່ອເວົ້າຖາມຂ້ອຍໄດ້ເລີຍ!`;
             appendMessage(welcomeHtml, 'bot-message', 'welcome-message', true);
         }
@@ -401,4 +401,51 @@ function openModal(src) {
 }
 function closeModal() { document.getElementById("image-modal").style.display = "none"; }
 function removeMessage(id) { const el = document.getElementById(id); if (el) el.remove(); }
-function toggleInput(enable) { userInput.disabled = !enable; sendBtn.disabled = !enable; if(enable) userInput.focus(); }
+
+// ==========================================
+// 🌟 ລະບົບກວດສອບໂຄວຕາຕອນເປີດເວັບ (ລັອກກ່ອງແຊທຖ້າຕິດໂຄວຕາ)
+// ==========================================
+async function checkQuotaOnLoad() {
+    const userId = localStorage.getItem('ssmi_user_id');
+    if (!userId) return;
+    try {
+        const response = await fetch(CHATBOT_CONFIG.API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'checkQuota', userId: userId }),
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+        });
+        const data = await response.json();
+        
+        if (data.isLimited) {
+            // ແປງ \n ເປັນ <br> ໃຫ້ຂຶ້ນແຖວໃໝ່ໃນໜ້າເວັບງາມໆ
+            const msg = data.message.replace(/\n/g, '<br>');
+            appendMessage(msg, 'bot-message', 'quota-warning', true);
+            
+            // 🌟 ລັອກກ່ອງພິມ ແລະ ປຸ່ມທຸກຢ່າງ! ບໍ່ໃຫ້ພະນັກງານຫຼິ້ນຕຸກຕິກໄດ້
+            toggleInput(false);
+            const inputField = document.getElementById('user-input');
+            if(inputField) inputField.placeholder = "🔒 ຕິດໂຄວຕາການນຳໃຊ້...";
+        }
+    } catch(e) { console.log("Quota check failed", e); }
+}
+
+// 🌟 ອັບເກຣດຟັງຊັນລັອກໜ້າຈໍ ໃຫ້ລັອກທັງປຸ່ມໄມໂຄຣໂຟນ ແລະ ປຸ່ມແນບໄຟລ໌
+function toggleInput(enable) { 
+    userInput.disabled = !enable; 
+    sendBtn.disabled = !enable; 
+    
+    const micBtnEl = document.getElementById('mic-btn');
+    const attachBtnEl = document.getElementById('attach-btn');
+    if (micBtnEl) micBtnEl.disabled = !enable;
+    if (attachBtnEl) attachBtnEl.disabled = !enable;
+    
+    // ປ່ຽນສີປຸ່ມໃຫ້ເບິ່ງຮູ້ວ່າຖືກລັອກຢູ່
+    if (!enable) {
+        if (micBtnEl) micBtnEl.style.opacity = '0.5';
+        if (attachBtnEl) attachBtnEl.style.opacity = '0.5';
+    } else {
+        if (micBtnEl) micBtnEl.style.opacity = '1';
+        if (attachBtnEl) attachBtnEl.style.opacity = '1';
+        userInput.focus(); 
+    }
+}
