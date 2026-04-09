@@ -18,10 +18,16 @@ window.onload = function() {
         if (!window.location.href.includes('login.html')) window.location.href = 'login.html';
     } else {
         if (document.getElementById('chat-app')) showChat();
-        loadChatHistory();
-        checkQuotaOnLoad(); // 🌟 ເພີ່ມຄຳສັ່ງກວດໂຄວຕາຕອນເປີດເວັບ!
+        loadChatThreads(); 
+        loadChatHistory(); 
+        checkQuotaOnLoad(); 
+        
+        // 🌟 โค้ดที่เปลี่ยน: เอาชื่อไปโชว์ในกล่อง Settings แทน
         const userName = localStorage.getItem('ssmi_user_name');
-        if (userName) document.getElementById('user-display-name').innerText = '👤 ' + userName;
+        if (userName) {
+            const userBox = document.getElementById('settings-user-name');
+            if (userBox) userBox.innerText = userName;
+        }
     }
 };
 
@@ -40,14 +46,17 @@ function showChat() {
 
 // 🌟 ฟังก์ชันเปิด-ปิด แถบ Sidebar
 function toggleSidebar() {
-    document.getElementById('chat-sidebar').classList.toggle('open');
+    const sidebar = document.getElementById('chat-sidebar');
+    if(sidebar) sidebar.classList.toggle('open');
     const backdrop = document.getElementById('sidebar-backdrop');
-    if (backdrop.classList.contains('show')) {
-        backdrop.classList.remove('show');
-        setTimeout(() => backdrop.style.display = 'none', 300);
-    } else {
-        backdrop.style.display = 'block';
-        setTimeout(() => backdrop.classList.add('show'), 10);
+    if(backdrop) {
+        if (backdrop.classList.contains('show')) {
+            backdrop.classList.remove('show');
+            setTimeout(() => backdrop.style.display = 'none', 300);
+        } else {
+            backdrop.style.display = 'block';
+            setTimeout(() => backdrop.classList.add('show'), 10);
+        }
     }
 }
 
@@ -56,11 +65,9 @@ function startNewChat() {
     currentSessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
     localStorage.setItem('ssmi_current_session', currentSessionId);
     
-    // ล้างหน้าจอ
     chatMessages.innerHTML = '';
     historyOffset = 0;
     
-    // พ่นคำทักทายตั้งต้น
     const welcomeHtml = `ສະບາຍດີ! ຂ້ອຍແມ່ນ SINA ຜູ້ຊ່ວຍ ຕອບຄຳຖາມທຸກຢ່າງ ຂອງ ສິນຊັບເມືອງເໜືອ.<br><br>
                 ທ່ານສາມາດພິມຄຳຖາມ, <b>ແນບເອກະສານ (PDF/ຮູບ)</b> ຫຼື <b>ກົດປຸ່ມໄມໂຄຣໂຟນ</b> ເພື່ອເວົ້າຖາມຂ້ອຍໄດ້ເລີຍ!`;
     appendMessage(welcomeHtml, 'bot-message', 'welcome-message', true);
@@ -71,18 +78,17 @@ function startNewChat() {
 
 // 🌟 สลับไปคุยห้องเก่า
 function switchThread(sessionId) {
-    if (currentSessionId === sessionId) { toggleSidebar(); return; } // ถ้ากดห้องเดิม ไม่ต้องโหลดใหม่
+    if (currentSessionId === sessionId) { toggleSidebar(); return; } 
     
     currentSessionId = sessionId;
     localStorage.setItem('ssmi_current_session', currentSessionId);
     
-    // ล้างหน้าจอและโหลดประวัติใหม่
     chatMessages.innerHTML = '';
     historyOffset = 0;
     loadChatHistory();
     
     toggleSidebar();
-    loadChatThreads(); // รีเฟรชแถบเมนูให้ไฮไลท์ถูกห้อง
+    loadChatThreads(); 
 }
 
 // 🌟 ดึงรายการห้องแชทมาโชว์ที่ Sidebar
@@ -96,6 +102,7 @@ async function loadChatThreads() {
         });
         const data = await res.json();
         const container = document.getElementById('thread-list-container');
+        if(!container) return;
         container.innerHTML = '';
         
         if (data.threads && data.threads.length > 0) {
@@ -122,7 +129,6 @@ async function loadChatHistory(isLoadMore = false) {
     const userId = localStorage.getItem('ssmi_user_id');
     if (!userId) return;
 
-    // สร้างปุ่มโหลดเพิ่ม (ถ้ายังไม่มี)
     let loadMoreContainer = document.getElementById('load-more-container');
     if (!loadMoreContainer) {
         chatMessages.insertAdjacentHTML('afterbegin', `
@@ -213,8 +219,7 @@ async function loadChatHistory(isLoadMore = false) {
             }
             historyOffset += data.history.length;
         } else if (!isLoadMore) {
-            // ถ้าเป็นแชทใหม่เอี่ยม ให้โชว์ข้อความต้อนรับ
-            chatMessages.innerHTML = ''; // Clear All
+            chatMessages.innerHTML = ''; 
             const welcomeHtml = `ສະບາຍດີ! ຂ້ອຍແມ່ນ SINA ຜູ້ຊ່ວຍ ຕອບຄຳຖາມທຸກຢ່າງ ຂອງ ສິນຊັບເມືອງເໜືອ.<br><br>
                 ທ່ານສາມາດພິມຄຳຖາມ, <b>ແນບເອກະສານ (PDF/ຮູບ)</b> ຫຼື <b>ກົດປຸ່ມໄມໂຄຣໂຟນ</b> ເພື່ອເວົ້າຖາມຂ້ອຍໄດ້ເລີຍ!`;
             appendMessage(welcomeHtml, 'bot-message', 'welcome-message', true);
@@ -271,8 +276,10 @@ function handleFileSelection(event) {
 function clearFiles() {
     currentFiles = [];
     document.getElementById('file-upload').value = '';
-    document.getElementById('file-preview-container').style.display = 'none';
-    document.getElementById('file-tags').innerHTML = '';
+    const previewContainer = document.getElementById('file-preview-container');
+    if(previewContainer) previewContainer.style.display = 'none';
+    const tagsContainer = document.getElementById('file-tags');
+    if(tagsContainer) tagsContainer.innerHTML = '';
 }
 
 async function sendMessage() {
@@ -290,7 +297,6 @@ async function sendMessage() {
         userDisplayHtml = filesHtml + text;
     }
 
-    // ลบข้อความต้อนรับทิ้งก่อนเริ่มคุย
     const welcomeMsg = document.getElementById('welcome-message');
     if (welcomeMsg) welcomeMsg.style.display = 'none'; 
 
@@ -318,7 +324,7 @@ async function sendMessage() {
                 history: currentChatHistory,
                 files: payloadFiles,
                 modelCategory: selectedModel,
-                sessionId: currentSessionId // 🌟 ส่งรหัสห้องแชทไปด้วยเสมอ
+                sessionId: currentSessionId // 🌟 ส่งรหัสห้องแชท
             }),
             headers: { 'Content-Type': 'text/plain;charset=utf-8' }
         });
@@ -334,15 +340,14 @@ async function sendMessage() {
             if (currentChatHistory.length > 20) currentChatHistory = currentChatHistory.slice(-20);
             speakText(data.reply); 
             
-            // สั่งโหลดแถบเมนูใหม่ เพื่อให้หัวข้อสนทนาล่าสุดเด้งขึ้นมา
+            // สั่งโหลดแถบเมนูใหม่
             loadChatThreads();
         } else if (data.error) {    
             const formattedError = data.error.replace(/\n/g, '<br>');
             appendMessage(formattedError, 'bot-message', null, true);
             
-            // 🌟 ถ้าติดโควตาตอนกำลังแชท ให้เปลี่ยนช่องพิมพ์เป็นป้ายไฟเลื่อนทันที!
+            // 🌟 ถ้าติดโควตาให้ล็อกเป็นป้ายไฟเลื่อนทันที!
             if (data.error.includes("ໂຄວຕາ")) {
-                // เอาข้อความ Error ยาวๆ มาลบการขึ้นบรรทัดใหม่ เพื่อให้มันวิ่งเป็นเส้นตรงยาวๆ
                 const flatErrorMsg = data.error.replace(/\n/g, '   |   ');
                 lockInputWithMarquee(`🔒 ${flatErrorMsg}`);
             }
@@ -350,13 +355,81 @@ async function sendMessage() {
     } catch (error) {
         removeMessage(loadingId);
         appendMessage("🌐 ບໍ່ສາມາດເຊື່ອມຕໍ່ກັບເຊີບເວີໄດ້", 'bot-message');
-    } finally {
         toggleInput(true);
+    } 
+}
+
+// ==========================================
+// 4. ระบบโควตา ป้ายไฟเลื่อน และ Lock Input
+// ==========================================
+function lockInputWithMarquee(messageText) {
+    toggleInput(false); 
+    
+    const inputField = document.getElementById('user-input');
+    if (inputField) inputField.style.display = 'none'; 
+    
+    let scrollingBox = document.getElementById('locked-scrolling-box');
+    if (!scrollingBox) {
+        scrollingBox = document.createElement('div');
+        scrollingBox.id = 'locked-scrolling-box';
+        scrollingBox.className = 'locked-scrolling-box';
+        scrollingBox.innerHTML = '<span id="locked-scrolling-text" class="locked-scrolling-text"></span>';
+        if (inputField) inputField.parentNode.insertBefore(scrollingBox, inputField.nextSibling);
+    }
+    
+    document.getElementById('locked-scrolling-text').innerText = messageText;
+    scrollingBox.style.display = 'flex';
+}
+
+async function checkQuotaOnLoad() {
+    const userId = localStorage.getItem('ssmi_user_id');
+    if (!userId) return;
+    try {
+        const response = await fetch(CHATBOT_CONFIG.API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'checkQuota', userId: userId }),
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+        });
+        const data = await response.json();
+        
+        if (data.isLimited) {
+            const msg = data.message.replace(/\n/g, '<br>');
+            appendMessage(msg, 'bot-message', 'quota-warning', true);
+            
+            const marqueeText = `🔒 ຕິດໂຄວຕາການນຳໃຊ້! ທ່ານສາມາດຖາມໄດ້ອີກຄັ້ງເວລາ ${data.timeString} ໂມງ (ອີກ ${data.remainString})`;
+            lockInputWithMarquee(marqueeText);
+        }
+    } catch(e) { console.log("Quota check failed", e); }
+}
+
+function toggleInput(enable) { 
+    userInput.disabled = !enable; 
+    sendBtn.disabled = !enable; 
+    
+    const micBtnEl = document.getElementById('mic-btn');
+    const attachBtnEl = document.getElementById('attach-btn');
+    if (micBtnEl) micBtnEl.disabled = !enable;
+    if (attachBtnEl) attachBtnEl.disabled = !enable;
+    
+    if (!enable) {
+        if (micBtnEl) micBtnEl.style.opacity = '0.5';
+        if (attachBtnEl) attachBtnEl.style.opacity = '0.5';
+    } else {
+        if (micBtnEl) micBtnEl.style.opacity = '1';
+        if (attachBtnEl) attachBtnEl.style.opacity = '1';
+        
+        // ถ้ากลับมาปลดล็อกแล้ว ให้ซ่อนป้ายไฟเลื่อนแล้วโชว์กล่องพิมพ์คืน
+        const inputField = document.getElementById('user-input');
+        if (inputField) inputField.style.display = 'block'; 
+        const scrollingBox = document.getElementById('locked-scrolling-box');
+        if (scrollingBox) scrollingBox.style.display = 'none';
+        
+        userInput.focus(); 
     }
 }
 
 // ==========================================
-// 4. ระบบเสียง & UI Helpers (ของเดิม)
+// 5. ระบบเสียง & UI Helpers (ของเดิม)
 // ==========================================
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition; let isRecording = false; let mediaRecorder = null; let recordedChunks = []; let isRecordingFallback = false;
@@ -411,74 +484,15 @@ function closeModal() { document.getElementById("image-modal").style.display = "
 function removeMessage(id) { const el = document.getElementById(id); if (el) el.remove(); }
 
 // ==========================================
-// 🌟 ລະບົບກວດສອບໂຄວຕາຕອນເປີດເວັບ (ລັອກກ່ອງແຊທຖ້າຕິດໂຄວຕາ)
+// 🌟 ระบบ Popup ตั้งค่า (Settings)
 // ==========================================
-// ==========================================
-// 🌟 ฟังก์ชันตัวช่วย: เปลี่ยนช่องพิมพ์เป็น "ป้ายไฟเลื่อน"
-// ==========================================
-function lockInputWithMarquee(messageText) {
-    toggleInput(false); // ล็อกปุ่มกดอื่นๆ
-    
-    const inputField = document.getElementById('user-input');
-    if (inputField) inputField.style.display = 'none'; // ซ่อนช่องพิมพ์ปกติ
-    
-    // สร้างกล่องข้อความเลื่อน ถ้ายังไม่เคยสร้าง (แทรกผ่าน JS อัตโนมัติ)
-    let scrollingBox = document.getElementById('locked-scrolling-box');
-    if (!scrollingBox) {
-        scrollingBox = document.createElement('div');
-        scrollingBox.id = 'locked-scrolling-box';
-        scrollingBox.className = 'locked-scrolling-box';
-        scrollingBox.innerHTML = '<span id="locked-scrolling-text" class="locked-scrolling-text"></span>';
-        if (inputField) inputField.parentNode.insertBefore(scrollingBox, inputField.nextSibling);
-    }
-    
-    // ใส่ข้อความและโชว์ป้ายไฟเลื่อน
-    document.getElementById('locked-scrolling-text').innerText = messageText;
-    scrollingBox.style.display = 'flex';
+function toggleSettingsModal() {
+    const modal = document.getElementById('settings-modal');
+    if (modal) modal.style.display = 'flex';
 }
 
-// ==========================================
-// 🌟 ระบบกวดสอบโควตาตอนเปิดเว็บ
-// ==========================================
-async function checkQuotaOnLoad() {
-    const userId = localStorage.getItem('ssmi_user_id');
-    if (!userId) return;
-    try {
-        const response = await fetch(CHATBOT_CONFIG.API_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'checkQuota', userId: userId }),
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-        });
-        const data = await response.json();
-        
-        if (data.isLimited) {
-            const msg = data.message.replace(/\n/g, '<br>');
-            appendMessage(msg, 'bot-message', 'quota-warning', true);
-            
-            // 🌟 เรียกใช้ป้ายไฟเลื่อน!
-            const marqueeText = `🔒 ຕິດໂຄວຕາການນຳໃຊ້! ທ່ານສາມາດຖາມໄດ້ອີກຄັ້ງເວລາ ${data.timeString} ໂມງ (ອີກ ${data.remainString})`;
-            lockInputWithMarquee(marqueeText);
-        }
-    } catch(e) { console.log("Quota check failed", e); }
-}
-
-// 🌟 ອັບເກຣດຟັງຊັນລັອກໜ້າຈໍ ໃຫ້ລັອກທັງປຸ່ມໄມໂຄຣໂຟນ ແລະ ປຸ່ມແນບໄຟລ໌
-function toggleInput(enable) { 
-    userInput.disabled = !enable; 
-    sendBtn.disabled = !enable; 
-    
-    const micBtnEl = document.getElementById('mic-btn');
-    const attachBtnEl = document.getElementById('attach-btn');
-    if (micBtnEl) micBtnEl.disabled = !enable;
-    if (attachBtnEl) attachBtnEl.disabled = !enable;
-    
-    // ປ່ຽນສີປຸ່ມໃຫ້ເບິ່ງຮູ້ວ່າຖືກລັອກຢູ່
-    if (!enable) {
-        if (micBtnEl) micBtnEl.style.opacity = '0.5';
-        if (attachBtnEl) attachBtnEl.style.opacity = '0.5';
-    } else {
-        if (micBtnEl) micBtnEl.style.opacity = '1';
-        if (attachBtnEl) attachBtnEl.style.opacity = '1';
-        userInput.focus(); 
-    }
+function closeSettingsModal(event) {
+    if (event) event.stopPropagation(); // ป้องกันการคลิกทะลุ
+    const modal = document.getElementById('settings-modal');
+    if (modal) modal.style.display = 'none';
 }
