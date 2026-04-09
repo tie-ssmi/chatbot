@@ -66,7 +66,13 @@
               <line x1="3" y1="18" x2="21" y2="18"></line>
             </svg>
           </button>
-          <img src="Nrng-Khai.png" alt="Nong Khai Logo" class="bot-logo" />
+          <img
+            id="bot-logo-img"
+            src="Nrng-Khai.png"
+            alt="Nong Khai Logo"
+            class="bot-logo"
+            style="cursor: pointer"
+          />
           <div class="status-dot"></div>
           <div class="header-text">
             <span id="bot-title">ນ້ອງໄຂ່</span>
@@ -453,6 +459,33 @@
             item.classList.remove("active");
             if (item.getAttribute("onclick").includes("'" + savedValue + "'"))
               item.classList.add("active");
+          });
+        }
+
+        const botLogo = document.getElementById("bot-logo-img");
+        if (botLogo) {
+          const originalSrc = botLogo.getAttribute("src");
+          const logoAudio = new Audio("fif.mp3");
+          let restoreTimer = null;
+
+          botLogo.addEventListener("click", () => {
+            if (!originalSrc) return;
+
+            botLogo.setAttribute("src", "gif.gif");
+
+            logoAudio.currentTime = 0;
+            logoAudio.play().catch(() => {
+              // Ignore autoplay/playback errors to keep click behavior smooth.
+            });
+
+            if (restoreTimer) {
+              clearTimeout(restoreTimer);
+            }
+
+            restoreTimer = setTimeout(() => {
+              botLogo.setAttribute("src", originalSrc);
+              restoreTimer = null;
+            }, 8000);
           });
         }
       });
