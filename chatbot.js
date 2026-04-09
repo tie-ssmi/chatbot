@@ -337,7 +337,14 @@ async function sendMessage() {
             // สั่งโหลดแถบเมนูใหม่ เพื่อให้หัวข้อสนทนาล่าสุดเด้งขึ้นมา
             loadChatThreads();
         } else if (data.error) {    
-            appendMessage("⚠️ ຂໍອະໄພ: " + data.error, 'bot-message');
+            const formattedError = data.error.replace(/\n/g, '<br>');
+            appendMessage(formattedError, 'bot-message', null, true);
+            
+            // 🌟 ຖ້າ Error ເປັນເລື່ອງໂຄວຕາ ໃຫ້ລັອກກ່ອງແຊທທັນທີ!
+            if (data.error.includes("ໂຄວຕາ")) {
+                toggleInput(false);
+                document.getElementById('user-input').placeholder = "🔒 ກະລຸນາລໍຖ້າຈົນກວ່າຈະປົດລັອກ...";
+            }
         }
     } catch (error) {
         removeMessage(loadingId);
@@ -417,14 +424,15 @@ async function checkQuotaOnLoad() {
         const data = await response.json();
         
         if (data.isLimited) {
-            // ແປງ \n ເປັນ <br> ໃຫ້ຂຶ້ນແຖວໃໝ່ໃນໜ້າເວັບງາມໆ
             const msg = data.message.replace(/\n/g, '<br>');
             appendMessage(msg, 'bot-message', 'quota-warning', true);
             
-            // 🌟 ລັອກກ່ອງພິມ ແລະ ປຸ່ມທຸກຢ່າງ! ບໍ່ໃຫ້ພະນັກງານຫຼິ້ນຕຸກຕິກໄດ້
             toggleInput(false);
             const inputField = document.getElementById('user-input');
-            if(inputField) inputField.placeholder = "🔒 ຕິດໂຄວຕາການນຳໃຊ້...";
+            if(inputField) {
+                // 🌟 ອັບເດດຂໍ້ຄວາມໃນກ່ອງພິມ ໃຫ້ບອກເວລາທີ່ເຫຼືອ!
+                inputField.placeholder = `🔒 ຖາມໄດ້ອີກຄັ້ງເວລາ ${data.timeString} ໂມງ (ອີກ ${data.remainString})`;
+            }
         }
     } catch(e) { console.log("Quota check failed", e); }
 }
