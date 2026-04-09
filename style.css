@@ -587,3 +587,110 @@ body {
     transition: transform 0.3s ease-in-out 0.1s;
     transform: translate(0);
 }
+
+/* =========================================
+   🌟 CSS สำหรับกล่องข้อความเลื่อนได้ (Marquee) ตอนติดโควตา
+   ========================================= */
+.locked-scrolling-box {
+    flex-grow: 1;
+    overflow: hidden;
+    background: #fdefef; /* สีแดงอ่อนๆ เตือนสายตา */
+    border: 1px solid #e86355;
+    border-radius: 14px;
+    white-space: nowrap;
+    position: relative;
+    display: none; /* ซ่อนไว้ก่อน จะโชว์ผ่าน JS */
+    align-items: center;
+    height: 46px; /* ความสูงเท่าช่องพิมพ์ปกติ */
+}
+
+.locked-scrolling-text {
+    display: inline-block;
+    color: #d53828;
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding-left: 100%; /* บังคับให้อักษรเริ่มวิ่งจากขวาสุดของจอ */
+    animation: marqueeScroll 10s linear infinite; /* วิ่งวนลูปไปเรื่อยๆ (ปรับตัวเลข 10s ให้วิ่งช้า/เร็วได้) */
+}
+
+@keyframes marqueeScroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-100%); }
+}
+
+.settings-btn {
+    background: transparent;
+    border: none;
+    color: white;
+    padding: 8px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s;
+}
+.settings-btn:hover { background: rgba(255,255,255,0.2); transform: rotate(45deg); }
+
+.settings-modal {
+    display: none; 
+    position: fixed; 
+    z-index: 10001; 
+    left: 0; top: 0; width: 100vw; height: 100vh; 
+    background-color: rgba(0,0,0,0.5); 
+    backdrop-filter: blur(4px);
+    justify-content: center; align-items: center;
+    animation: fadeIn 0.2s ease;
+}
+
+.settings-content {
+    background: white;
+    width: 90%;
+    max-width: 380px;
+    border-radius: 24px;
+    padding: 25px;
+    position: relative;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+    display: flex; flex-direction: column; gap: 15px;
+    animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.close-settings-btn {
+    position: absolute; top: 15px; right: 15px;
+    background: #f0f4f8; border: none; color: #555;
+    width: 32px; height: 32px; border-radius: 50%;
+    font-size: 1.2rem; cursor: pointer; transition: 0.2s;
+    display: flex; align-items: center; justify-content: center;
+}
+.close-settings-btn:hover { background: #e2e8f0; color: #000; }
+
+.settings-profile { text-align: center; }
+.settings-bot-logo { width: 70px; height: 70px; border-radius: 18px; margin-bottom: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); object-fit: contain; background: white; padding: 5px; }
+.settings-profile h3 { color: var(--primary-color); margin: 0 0 5px 0; font-size: 1.3rem; }
+.settings-profile p { color: var(--text-color); font-size: 0.85rem; margin: 0 0 8px 0; font-weight: 500; }
+.settings-version { background: #eef5f8; color: var(--primary-color); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
+
+.settings-divider { border: none; border-top: 1px solid var(--border-color); margin: 5px 0; }
+
+.settings-user-box { display: flex; align-items: center; background: #f8fafd; padding: 12px 15px; border-radius: 14px; gap: 12px; border: 1px solid #eef5f8; }
+.settings-user-box .user-avatar { background: var(--primary-color); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+.settings-user-box .user-details { display: flex; flex-direction: column; }
+.settings-user-box .user-details span { font-size: 0.75rem; color: var(--muted-text); }
+.settings-user-box .user-details strong { font-size: 0.95rem; color: var(--text-color); }
+
+.settings-voice-box { display: flex; justify-content: space-between; align-items: center; padding: 10px 5px; }
+.settings-voice-box .voice-label { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 0.9rem; color: var(--text-color); }
+
+/* สวิตช์เปิดปิดสไตล์ iOS */
+.switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+.slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+input:checked + .slider { background-color: #69e39a; }
+input:checked + .slider:before { transform: translateX(22px); }
+
+.settings-logout-btn { background: #fff5f5; color: #e86355; border: 1px solid #fed7d7; width: 100%; padding: 14px; border-radius: 14px; font-family: 'Noto Sans Lao', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: 0.2s; margin-top: 5px; }
+.settings-logout-btn:hover { background: #ffe3e3; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
