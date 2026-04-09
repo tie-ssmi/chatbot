@@ -587,3 +587,33 @@ body {
     transition: transform 0.3s ease-in-out 0.1s;
     transform: translate(0);
 }
+
+/* =========================================
+   🌟 CSS สำหรับกล่องข้อความเลื่อนได้ (Marquee) ตอนติดโควตา
+   ========================================= */
+.locked-scrolling-box {
+    flex-grow: 1;
+    overflow: hidden;
+    background: #fdefef; /* สีแดงอ่อนๆ เตือนสายตา */
+    border: 1px solid #e86355;
+    border-radius: 14px;
+    white-space: nowrap;
+    position: relative;
+    display: none; /* ซ่อนไว้ก่อน จะโชว์ผ่าน JS */
+    align-items: center;
+    height: 46px; /* ความสูงเท่าช่องพิมพ์ปกติ */
+}
+
+.locked-scrolling-text {
+    display: inline-block;
+    color: #d53828;
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding-left: 100%; /* บังคับให้อักษรเริ่มวิ่งจากขวาสุดของจอ */
+    animation: marqueeScroll 10s linear infinite; /* วิ่งวนลูปไปเรื่อยๆ (ปรับตัวเลข 10s ให้วิ่งช้า/เร็วได้) */
+}
+
+@keyframes marqueeScroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-100%); }
+}

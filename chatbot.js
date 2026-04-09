@@ -340,10 +340,11 @@ async function sendMessage() {
             const formattedError = data.error.replace(/\n/g, '<br>');
             appendMessage(formattedError, 'bot-message', null, true);
             
-            // 🌟 ຖ້າ Error ເປັນເລື່ອງໂຄວຕາ ໃຫ້ລັອກກ່ອງແຊທທັນທີ!
+            // 🌟 ถ้าติดโควตาตอนกำลังแชท ให้เปลี่ยนช่องพิมพ์เป็นป้ายไฟเลื่อนทันที!
             if (data.error.includes("ໂຄວຕາ")) {
-                toggleInput(false);
-                document.getElementById('user-input').placeholder = "🔒 ກະລຸນາລໍຖ້າຈົນກວ່າຈະປົດລັອກ...";
+                // เอาข้อความ Error ยาวๆ มาลบการขึ้นบรรทัดใหม่ เพื่อให้มันวิ่งเป็นเส้นตรงยาวๆ
+                const flatErrorMsg = data.error.replace(/\n/g, '   |   ');
+                lockInputWithMarquee(`🔒 ${flatErrorMsg}`);
             }
         }
     } catch (error) {
@@ -412,6 +413,33 @@ function removeMessage(id) { const el = document.getElementById(id); if (el) el.
 // ==========================================
 // 🌟 ລະບົບກວດສອບໂຄວຕາຕອນເປີດເວັບ (ລັອກກ່ອງແຊທຖ້າຕິດໂຄວຕາ)
 // ==========================================
+// ==========================================
+// 🌟 ฟังก์ชันตัวช่วย: เปลี่ยนช่องพิมพ์เป็น "ป้ายไฟเลื่อน"
+// ==========================================
+function lockInputWithMarquee(messageText) {
+    toggleInput(false); // ล็อกปุ่มกดอื่นๆ
+    
+    const inputField = document.getElementById('user-input');
+    if (inputField) inputField.style.display = 'none'; // ซ่อนช่องพิมพ์ปกติ
+    
+    // สร้างกล่องข้อความเลื่อน ถ้ายังไม่เคยสร้าง (แทรกผ่าน JS อัตโนมัติ)
+    let scrollingBox = document.getElementById('locked-scrolling-box');
+    if (!scrollingBox) {
+        scrollingBox = document.createElement('div');
+        scrollingBox.id = 'locked-scrolling-box';
+        scrollingBox.className = 'locked-scrolling-box';
+        scrollingBox.innerHTML = '<span id="locked-scrolling-text" class="locked-scrolling-text"></span>';
+        if (inputField) inputField.parentNode.insertBefore(scrollingBox, inputField.nextSibling);
+    }
+    
+    // ใส่ข้อความและโชว์ป้ายไฟเลื่อน
+    document.getElementById('locked-scrolling-text').innerText = messageText;
+    scrollingBox.style.display = 'flex';
+}
+
+// ==========================================
+// 🌟 ระบบกวดสอบโควตาตอนเปิดเว็บ
+// ==========================================
 async function checkQuotaOnLoad() {
     const userId = localStorage.getItem('ssmi_user_id');
     if (!userId) return;
@@ -427,12 +455,9 @@ async function checkQuotaOnLoad() {
             const msg = data.message.replace(/\n/g, '<br>');
             appendMessage(msg, 'bot-message', 'quota-warning', true);
             
-            toggleInput(false);
-            const inputField = document.getElementById('user-input');
-            if(inputField) {
-                // 🌟 ອັບເດດຂໍ້ຄວາມໃນກ່ອງພິມ ໃຫ້ບອກເວລາທີ່ເຫຼືອ!
-                inputField.placeholder = `🔒 ຖາມໄດ້ອີກຄັ້ງເວລາ ${data.timeString} ໂມງ (ອີກ ${data.remainString})`;
-            }
+            // 🌟 เรียกใช้ป้ายไฟเลื่อน!
+            const marqueeText = `🔒 ຕິດໂຄວຕາການນຳໃຊ້! ທ່ານສາມາດຖາມໄດ້ອີກຄັ້ງເວລາ ${data.timeString} ໂມງ (ອີກ ${data.remainString})`;
+            lockInputWithMarquee(marqueeText);
         }
     } catch(e) { console.log("Quota check failed", e); }
 }
