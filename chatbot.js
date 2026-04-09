@@ -275,9 +275,54 @@ function clearFiles() {
     document.getElementById('file-tags').innerHTML = '';
 }
 
+const GREETING_PATTERNS = [
+    /^hi$/i,
+    /^hello$/i,
+    /^hey$/i,
+    /^good\s*morning$/i,
+    /^ສະບາຍດີ$/,
+    /^ເຮ$/
+];
+
+function isGreetingMessage(text) {
+    const normalized = (text || '').trim();
+    return GREETING_PATTERNS.some(pattern => pattern.test(normalized));
+}
+
+function closeGreetingVideo() {
+    const videoModal = document.getElementById('video-greeting-modal');
+    const greetingVideo = document.getElementById('greeting-video');
+    if (!videoModal || !greetingVideo) return;
+    greetingVideo.pause();
+    greetingVideo.currentTime = 0;
+    videoModal.style.display = 'none';
+}
+
+function showGreetingVideoPopup() {
+    const videoModal = document.getElementById('video-greeting-modal');
+    const greetingVideo = document.getElementById('greeting-video');
+    if (!videoModal || !greetingVideo) return;
+
+    videoModal.style.display = 'flex';
+    greetingVideo.currentTime = 0;
+    greetingVideo.play().catch(() => {
+        // Ignore playback blocking to keep chat flow stable.
+    });
+
+    setTimeout(() => {
+        closeGreetingVideo();
+    }, 8000);
+}
+
 async function sendMessage() {
     const text = userInput.value.trim();
     if (!text && currentFiles.length === 0) return;
+
+    if (isGreetingMessage(text) && currentFiles.length === 0) {
+        showGreetingVideoPopup();
+        userInput.value = '';
+        return;
+    }
 
     let userDisplayHtml = text;
     if (currentFiles.length > 0) {
