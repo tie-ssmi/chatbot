@@ -332,7 +332,7 @@ async function sendMessage() {
         const data = await response.json();
         removeMessage(loadingId);
 
-        if (data.reply) {
+       if (data.reply) {
             const formattedReply = data.reply.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
             appendMessage(formattedReply, 'bot-message', null, true);
             currentChatHistory.push({ role: 'user', message: text });
@@ -342,14 +342,21 @@ async function sendMessage() {
             
             // สั่งโหลดแถบเมนูใหม่
             loadChatThreads();
+
+            // 🌟 สำคัญมาก: ปลดล็อกกล่องพิมพ์ข้อความเมื่อบอทตอบเสร็จ!
+            toggleInput(true);
+
         } else if (data.error) {    
             const formattedError = data.error.replace(/\n/g, '<br>');
             appendMessage(formattedError, 'bot-message', null, true);
             
-            // 🌟 ถ้าติดโควตาให้ล็อกเป็นป้ายไฟเลื่อนทันที!
-            if (data.error.includes("ໂກຕ້າ")) {
+            // ถ้าติดโควตาให้ล็อกเป็นป้ายไฟเลื่อนทันที!
+            if (data.error.includes("ໂຄວຕາ")) {
                 const flatErrorMsg = data.error.replace(/\n/g, '   |   ');
                 lockInputWithMarquee(`🔒 ${flatErrorMsg}`);
+            } else {
+                // 🌟 สำคัญมาก: ถ้าเป็น Error อื่นๆ (เช่น เซิร์ฟเวอร์ล่ม 503) ต้องปลดล็อกให้ผู้ใช้พิมพ์ถามใหม่ได้
+                toggleInput(true);
             }
         }
     } catch (error) {
