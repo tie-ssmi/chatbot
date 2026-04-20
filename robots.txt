@@ -1,5 +1,4 @@
 User-agent: *
 Allow: /
-Disallow: /login.html
 
 Sitemap: https://chatbot.ssmilaos.com/sitemap.xml
