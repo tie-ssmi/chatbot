@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ເຂົ້າສູ່ລະບົບ - SSMI HR</title>
+    <title>SINA Chatbots - Login</title>
     <link rel="stylesheet" href="style.css">
     <style>
         /* CSS ສະເພາະໜ້າ Login ໃຫ້ກ່ອງຢູ່ເຄິ່ງກາງງາມໆ */
@@ -24,7 +24,7 @@
 
     <div class="login-wrapper">
         <div class="login-box">
-            <h2>SINA</h2>
+            <h2>SINA Chatbots</h2>
             <div class="input-group">
                 <label>ລະຫັດພະນັກງານ (Username)</label>
                 <input type="text" id="username" placeholder="ປ້ອນລະຫັດພະນັກງານ..." required>
@@ -33,7 +33,7 @@
                 <label>ລະຫັດຜ່ານ (Password)</label>
                 <input type="password" id="password" placeholder="ປ້ອນລະຫັດຜ່ານ..." required onkeypress="handleLoginEnter(event)">
             </div>
-            <button class="login-btn" id="login-btn" onclick="attemptLogin()">ເຂົ້າສູ່ລະບົບ</button>
+            <button class="login-btn" id="login-btn" aria-label="Login" onclick="attemptLogin()">ເຂົ້າສູ່ລະບົບ</button>
             <div id="error-msg"></div>
         </div>
     </div>
