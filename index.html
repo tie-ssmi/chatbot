@@ -137,7 +137,7 @@
           <div class="header-text">
             <span id="bot-title">SINA</span>
             <small>AI ຊ່ວຍຕອບຄຳຖາມກ່ຽວກັບ ສິນຊັບເມືອງເໜືອ</small>
-            <small>v 0.0.6.8</small>
+            <small>v 0.0.6.9</small>
           </div>
         </div>
         <div class="header-actions">
@@ -146,7 +146,7 @@
           </button>
         </div>
       </div>
-
+      <!-- the popup modal for settings -->
       <div id="settings-modal" class="settings-modal" onclick="closeSettingsModal(event)">
           <div class="settings-content" onclick="event.stopPropagation()">
               <button class="close-settings-btn" onclick="closeSettingsModal()">&times;</button>
@@ -174,7 +174,7 @@
                       <span>ເປີດສຽງອ່ານອັດຕະໂນມັດ</span>
                   </div>
                   <label class="switch">
-                      <input type="checkbox" id="auto-speak" checked>
+                      <input type="checkbox" id="auto-speak" onchange="toggleAutoSpeak(this.checked)">
                       <span class="slider round"></span>
                   </label>
               </div>
