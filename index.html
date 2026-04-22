@@ -524,7 +524,7 @@
         const botLogo = document.getElementById("bot-logo-img");
         if (botLogo) {
           const originalSrc = botLogo.getAttribute("src");
-          // const logoAudio = new Audio("fif.mp3");
+          const logoAudio = new Audio("fif.mp3");
           let restoreTimer = null;
           const effectDurationMs = 8000;
           const autoPlayEveryMs = 18000;
@@ -534,10 +534,7 @@
 
             botLogo.setAttribute("src", "SINA.gif");
 
-            // logoAudio.currentTime = 0;
-            // logoAudio.play().catch(() => {
-            //   // Ignore autoplay/playback errors to keep click behavior smooth.
-            // });
+        
 
             if (restoreTimer) {
               clearTimeout(restoreTimer);
@@ -555,6 +552,10 @@
             playLogoEffect();
             clearInterval(autoPlayInterval);
             autoPlayInterval = setInterval(playLogoEffect, autoPlayEveryMs);
+                logoAudio.currentTime = 0;
+            logoAudio.play().catch(() => {
+              // Ignore autoplay/playback errors to keep click behavior smooth.
+            });
           });
         }
       });
