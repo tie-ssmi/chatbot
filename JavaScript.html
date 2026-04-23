@@ -1,0 +1,10 @@
+<script>
+  window.addEventListener("message", function(event) {
+    // ຮັບຂໍ້ມູນທີ່ສົ່ງມາຈາກ Next.js
+    const data = event.data;
+    if (data.userName) {
+      console.log("ສະບາຍດີ " + data.userName);
+      // ທ່ານສາມາດເອົາຊື່ໄປສະແດງໃນ Chatbot ໄດ້ເລີຍ
+    }
+  });
+</script>

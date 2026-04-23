@@ -12,6 +12,11 @@ var LOG_SHEET_NAME = "Logs";
 // ==========================================
 // 1. Main Function (Handle Web Requests)
 // ==========================================
+function doGet() {
+  return ContentService.createTextOutput(JSON.stringify({ status: "ok" }))
+      .setMimeType(ContentService.MimeType.JSON);
+}
+
 function doPost(e) {
   try {
     var requestData = JSON.parse(e.postData.contents);
