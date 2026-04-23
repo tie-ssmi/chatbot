@@ -557,40 +557,40 @@ function normalizeTextForInput(text) {
         .trim();
 }
 
-async function convertThaiScriptToLao(text) {
-    const userId = localStorage.getItem('ssmi_user_id') || 'Unknown';
-    const userName = localStorage.getItem('ssmi_user_name') || 'ພະນັກງານ';
-    const selectedModel = (document.getElementById('ai-model-select') || {}).value || 'hr';
-
-    const response = await fetch(CHATBOT_CONFIG.API_URL, {
-        method: 'POST',
-        body: JSON.stringify({
-            action: 'chat',
-            message: `Convert this Thai-script text into Lao script only. Keep the same meaning and output only Lao text, no explanation:\n${text}`,
-            userId: userId,
-            userName: userName,
-            history: [],
-            files: [],
-            modelCategory: selectedModel,
-            sessionId: currentSessionId
-        }),
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-    });
-
-    const data = await response.json();
-    if (!data.reply) return '';
-    return normalizeTextForInput(data.reply);
+function convertThaiScriptToLao(text) {
+    // Direct Unicode character mapping: Thai → Lao
+    const map = {
+        // Consonants
+        'ก': 'ກ', 'ข': 'ຂ', 'ฃ': 'ຂ', 'ค': 'ຄ', 'ฅ': 'ຄ', 'ฆ': 'ຄ',
+        'ง': 'ງ', 'จ': 'ຈ', 'ฉ': 'ສ', 'ช': 'ຊ', 'ซ': 'ຊ', 'ฌ': 'ຊ',
+        'ญ': 'ຍ', 'ฎ': 'ດ', 'ฏ': 'ຕ', 'ฐ': 'ຖ', 'ฑ': 'ທ', 'ฒ': 'ທ',
+        'ณ': 'ນ', 'ด': 'ດ', 'ต': 'ຕ', 'ถ': 'ຖ', 'ท': 'ທ', 'ธ': 'ທ',
+        'น': 'ນ', 'บ': 'ບ', 'ป': 'ປ', 'ผ': 'ຜ', 'ฝ': 'ຝ', 'พ': 'ພ',
+        'ฟ': 'ຟ', 'ภ': 'ພ', 'ม': 'ມ', 'ย': 'ຍ', 'ร': 'ຣ', 'ล': 'ລ',
+        'ว': 'ວ', 'ศ': 'ສ', 'ษ': 'ສ', 'ส': 'ສ', 'ห': 'ຫ', 'ฬ': 'ລ',
+        'อ': 'ອ', 'ฮ': 'ຮ',
+        // Vowels & diacritics
+        'ะ': 'ະ', 'ั': 'ັ', 'า': 'າ', 'ำ': 'ຳ', 'ิ': 'ິ', 'ี': 'ີ',
+        'ึ': 'ຶ', 'ื': 'ື', 'ุ': 'ຸ', 'ู': 'ູ', 'เ': 'ເ', 'แ': 'ແ',
+        'โ': 'ໂ', 'ใ': 'ໃ', 'ไ': 'ໄ', '็': 'ໍ', 'ํ': 'ໍ',
+        // Tone marks
+        '่': '່', '้': '້', '๊': '໊', '๋': '໋',
+        // Punctuation & symbols
+        'ๆ': 'ໆ', '฿': '₭',
+        // Thai digits → Lao digits
+        '๐': '໐', '๑': '໑', '๒': '໒', '๓': '໓', '๔': '໔',
+        '๕': '໕', '๖': '໖', '๗': '໗', '๘': '໘', '๙': '໙'
+    };
+    return (text || '').split('').map(ch => map[ch] || ch).join('');
 }
 
-async function enforceLaoTranscript(text) {
+function enforceLaoTranscript(text) {
     const clean = normalizeTextForInput(text);
     if (!clean) return clean;
 
-    if (containsThaiScript(clean) && !containsLaoScript(clean)) {
-        try {
-            const converted = await convertThaiScriptToLao(clean);
-            if (converted && containsLaoScript(converted)) return converted;
-        } catch (e) {}
+    if (containsThaiScript(clean)) {
+        const converted = convertThaiScriptToLao(clean);
+        if (converted && containsLaoScript(converted)) return converted;
     }
 
     return clean;
@@ -611,7 +611,7 @@ async function submitRecordedAudio(audioBlob) {
 
     const data = await response.json();
     if (data.transcript) {
-        const finalTranscript = await enforceLaoTranscript(data.transcript);
+        const finalTranscript = enforceLaoTranscript(data.transcript);
         userInput.value = finalTranscript;
         userInput.focus();
         userInput.setSelectionRange(userInput.value.length, userInput.value.length);
@@ -695,8 +695,8 @@ if (SpeechRecognition) {
     recognition.lang = CHATBOT_CONFIG.LANGUAGE;
     recognition.continuous = false; recognition.interimResults = false; recognition.maxAlternatives = 1;
     recognition.onstart = () => { isRecording = true; micBtn.classList.add('recording'); };
-    recognition.onresult = async (event) => {
-        const finalTranscript = await enforceLaoTranscript(event.results[0][0].transcript);
+    recognition.onresult = (event) => {
+        const finalTranscript = enforceLaoTranscript(event.results[0][0].transcript);
         userInput.value = finalTranscript;
         userInput.focus();
         userInput.setSelectionRange(userInput.value.length, userInput.value.length);
