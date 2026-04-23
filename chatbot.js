@@ -441,6 +441,123 @@ function toggleInput(enable) {
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition; let isRecording = false; let mediaRecorder = null; let recordedChunks = []; let isRecordingFallback = false;
 
+function isAppleMobileDevice() {
+    return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function shouldUseRecordingFallback() {
+    return isAppleMobileDevice() || !SpeechRecognition;
+}
+
+function getSupportedAudioMimeType() {
+    if (typeof MediaRecorder === 'undefined' || typeof MediaRecorder.isTypeSupported !== 'function') return '';
+    const mimeTypes = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'];
+    return mimeTypes.find(type => MediaRecorder.isTypeSupported(type)) || '';
+}
+
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const result = reader.result;
+            if (typeof result !== 'string') {
+                reject(new Error('Audio conversion failed'));
+                return;
+            }
+            resolve(result.split(',')[1]);
+        };
+        reader.onerror = () => reject(reader.error || new Error('Audio conversion failed'));
+        reader.readAsDataURL(blob);
+    });
+}
+
+async function submitRecordedAudio(audioBlob) {
+    const base64Audio = await blobToBase64(audioBlob);
+    const response = await fetch(CHATBOT_CONFIG.API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+            action: 'transcribe',
+            base64Audio: base64Audio,
+            mimeType: audioBlob.type || 'audio/mp4'
+        }),
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+    });
+
+    const data = await response.json();
+    if (data.transcript) {
+        userInput.value = data.transcript;
+        sendMessage();
+        return;
+    }
+
+    throw new Error(data.error || 'Transcription failed');
+}
+
+async function startFallbackRecording() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
+        alert('⚠️ ອຸປະກອນນີ້ບໍ່ຮອງຮັບການອັດສຽງ');
+        return;
+    }
+
+    const mimeType = getSupportedAudioMimeType();
+
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        recordedChunks = [];
+        mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+        isRecordingFallback = true;
+        isRecording = true;
+        micBtn.classList.add('recording');
+
+        mediaRecorder.ondataavailable = (event) => {
+            if (event.data && event.data.size > 0) recordedChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || mimeType || 'audio/mp4' });
+            stream.getTracks().forEach(track => track.stop());
+            mediaRecorder = null;
+            recordedChunks = [];
+            isRecordingFallback = false;
+            isRecording = false;
+            micBtn.classList.remove('recording');
+
+            if (!audioBlob.size) {
+                alert('⚠️ ບໍ່ພົບຂໍ້ມູນສຽງ');
+                return;
+            }
+
+            try {
+                await submitRecordedAudio(audioBlob);
+            } catch (error) {
+                alert('⚠️ ຖອດສຽງບໍ່ສຳເລັດ');
+            }
+        };
+
+        mediaRecorder.onerror = () => {
+            stream.getTracks().forEach(track => track.stop());
+            mediaRecorder = null;
+            recordedChunks = [];
+            isRecordingFallback = false;
+            isRecording = false;
+            micBtn.classList.remove('recording');
+            alert('⚠️ ການອັດສຽງລົ້ມເຫຼວ');
+        };
+
+        mediaRecorder.start();
+    } catch (err) {
+        isRecordingFallback = false;
+        isRecording = false;
+        micBtn.classList.remove('recording');
+        alert('⚠️ ບໍ່ສາມາດເປີດໄມໂຄຣໂຟນໄດ້!');
+    }
+}
+
+function stopFallbackRecording() {
+    if (!mediaRecorder) return;
+    if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+}
+
 if (SpeechRecognition) {
     recognition = new SpeechRecognition();
     recognition.lang = CHATBOT_CONFIG.LANGUAGE;
@@ -454,6 +571,15 @@ if (SpeechRecognition) {
 }
 
 async function toggleMic() {
+    if (shouldUseRecordingFallback()) {
+        if (isRecordingFallback) {
+            stopFallbackRecording();
+            return;
+        }
+        await startFallbackRecording();
+        return;
+    }
+
     if (recognition) {
         if (isRecording) { recognition.stop(); return; }
         try {
