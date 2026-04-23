@@ -440,6 +440,9 @@ function toggleInput(enable) {
 // ==========================================
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition; let isRecording = false; let mediaRecorder = null; let recordedChunks = []; let isRecordingFallback = false;
+const SILENCE_TIMEOUT_MS = 5000;
+const SILENCE_RMS_THRESHOLD = 0.02;
+let silenceDetectionState = null;
 
 function isAppleMobileDevice() {
     return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -471,6 +474,73 @@ function blobToBase64(blob) {
     });
 }
 
+function stopSilenceDetection() {
+    if (!silenceDetectionState) return;
+
+    if (silenceDetectionState.rafId) {
+        cancelAnimationFrame(silenceDetectionState.rafId);
+    }
+
+    try {
+        if (silenceDetectionState.source) silenceDetectionState.source.disconnect();
+    } catch (e) {}
+
+    try {
+        if (silenceDetectionState.analyser) silenceDetectionState.analyser.disconnect();
+    } catch (e) {}
+
+    if (silenceDetectionState.audioContext && silenceDetectionState.audioContext.state !== 'closed') {
+        silenceDetectionState.audioContext.close().catch(() => {});
+    }
+
+    silenceDetectionState = null;
+}
+
+function startSilenceDetection(stream) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+
+    const audioContext = new AudioContextClass();
+    const analyser = audioContext.createAnalyser();
+    analyser.fftSize = 2048;
+
+    const source = audioContext.createMediaStreamSource(stream);
+    source.connect(analyser);
+
+    const dataArray = new Uint8Array(analyser.fftSize);
+    let lastSpeechAt = Date.now();
+
+    silenceDetectionState = { audioContext, analyser, source, rafId: null };
+
+    const monitor = () => {
+        if (!isRecordingFallback || !mediaRecorder || mediaRecorder.state === 'inactive') {
+            stopSilenceDetection();
+            return;
+        }
+
+        analyser.getByteTimeDomainData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+            const normalized = (dataArray[i] - 128) / 128;
+            sum += normalized * normalized;
+        }
+        const rms = Math.sqrt(sum / dataArray.length);
+
+        if (rms > SILENCE_RMS_THRESHOLD) {
+            lastSpeechAt = Date.now();
+        }
+
+        if (Date.now() - lastSpeechAt >= SILENCE_TIMEOUT_MS) {
+            stopFallbackRecording();
+            return;
+        }
+
+        silenceDetectionState.rafId = requestAnimationFrame(monitor);
+    };
+
+    silenceDetectionState.rafId = requestAnimationFrame(monitor);
+}
+
 async function submitRecordedAudio(audioBlob) {
     const base64Audio = await blobToBase64(audioBlob);
     const response = await fetch(CHATBOT_CONFIG.API_URL, {
@@ -478,7 +548,8 @@ async function submitRecordedAudio(audioBlob) {
         body: JSON.stringify({
             action: 'transcribe',
             base64Audio: base64Audio,
-            mimeType: audioBlob.type || 'audio/mp4'
+            mimeType: audioBlob.type || 'audio/mp4',
+            language: CHATBOT_CONFIG.LANGUAGE || 'lo-LA'
         }),
         headers: { 'Content-Type': 'text/plain;charset=utf-8' }
     });
@@ -515,6 +586,7 @@ async function startFallbackRecording() {
 
         mediaRecorder.onstop = async () => {
             const audioBlob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || mimeType || 'audio/mp4' });
+            stopSilenceDetection();
             stream.getTracks().forEach(track => track.stop());
             mediaRecorder = null;
             recordedChunks = [];
@@ -535,6 +607,7 @@ async function startFallbackRecording() {
         };
 
         mediaRecorder.onerror = () => {
+            stopSilenceDetection();
             stream.getTracks().forEach(track => track.stop());
             mediaRecorder = null;
             recordedChunks = [];
@@ -545,7 +618,9 @@ async function startFallbackRecording() {
         };
 
         mediaRecorder.start();
+        startSilenceDetection(stream);
     } catch (err) {
+        stopSilenceDetection();
         isRecordingFallback = false;
         isRecording = false;
         micBtn.classList.remove('recording');

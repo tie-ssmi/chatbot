@@ -32,7 +32,7 @@ function doPost(e) {
     }
     if (action === "getThreads") return getChatThreads(requestData.userId);
 
-    if (action === "transcribe") return handleAudioTranscription(requestData.base64Audio, requestData.mimeType);
+    if (action === "transcribe") return handleAudioTranscription(requestData.base64Audio, requestData.mimeType, requestData.language);
 
     if (action === "chat") {
       var userMessage = requestData.message;
@@ -344,15 +344,16 @@ function saveFileToDrive(base64, mimeType, userId, index) {
 // ==========================================
 // ✅ Audio Transcription (iOS Mic Fallback)
 // ==========================================
-function handleAudioTranscription(base64Audio, mimeType) {
+function handleAudioTranscription(base64Audio, mimeType, language) {
   try {
+    var requestedLanguage = language || "lo-LA";
     var activeApiKey = GEMINI_API_KEYS[0];
     var url = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent?key=" + activeApiKey;
     var payload = {
       "contents": [{
         "role": "user",
         "parts": [
-          { "text": "Transcribe this audio exactly as spoken. Output only the transcribed text with no extra commentary, no quotation marks, and no formatting." },
+          { "text": "Transcribe this audio exactly as spoken. The target language is Lao (lo-LA). Keep the result in Lao script only, do not translate to English, and do not add commentary, quotation marks, or formatting. If speech is unclear, still return best-effort Lao transcription. Requested language: " + requestedLanguage },
           { "inlineData": { "mimeType": mimeType, "data": base64Audio } }
         ]
       }],
