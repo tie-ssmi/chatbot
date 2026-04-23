@@ -440,7 +440,7 @@ function toggleInput(enable) {
 // ==========================================
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition; let isRecording = false; let mediaRecorder = null; let recordedChunks = []; let isRecordingFallback = false;
-const SILENCE_TIMEOUT_MS = 1000;
+const SILENCE_TIMEOUT_MS = 5000;
 const SILENCE_RMS_THRESHOLD = 0.02;
 let silenceDetectionState = null;
 
