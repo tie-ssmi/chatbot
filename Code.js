@@ -374,11 +374,57 @@ function handleAudioTranscription(base64Audio, mimeType, language) {
     var responseData = JSON.parse(response.getContentText());
     if (responseData.candidates && responseData.candidates[0] && responseData.candidates[0].content) {
       var transcript = responseData.candidates[0].content.parts[0].text.trim();
+
+      // If model returns Thai script for Lao speech, convert to Lao script before sending back.
+      if (containsThaiScript(transcript) && !containsLaoScript(transcript)) {
+        var converted = convertThaiLikeTextToLaoScript(transcript, activeApiKey);
+        if (converted) transcript = converted;
+      }
+
       return createJsonResponse({ transcript: transcript });
     }
     return createJsonResponse({ error: "ຖອດສຽງບໍ່ສຳເລັດ" });
   } catch (err) {
     return createJsonResponse({ error: "ເກີດຂໍ້ຜິດພາດ: " + err.toString() });
+  }
+}
+
+function containsThaiScript(text) {
+  return /[\u0E00-\u0E7F]/.test(text || "");
+}
+
+function containsLaoScript(text) {
+  return /[\u0E80-\u0EFF]/.test(text || "");
+}
+
+function convertThaiLikeTextToLaoScript(inputText, apiKey) {
+  try {
+    var url = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent?key=" + apiKey;
+    var payload = {
+      "contents": [{
+        "role": "user",
+        "parts": [{
+          "text": "Convert the following Thai-script text into Lao script only. Keep meaning and wording as close as possible. Output only Lao script text with no explanation:\n" + inputText
+        }]
+      }],
+      "generationConfig": { "temperature": 0, "maxOutputTokens": 1000 }
+    };
+
+    var response = UrlFetchApp.fetch(url, {
+      "method": "post",
+      "contentType": "application/json",
+      "payload": JSON.stringify(payload),
+      "muteHttpExceptions": true
+    });
+
+    var data = JSON.parse(response.getContentText());
+    if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
+      var out = (data.candidates[0].content.parts[0].text || "").trim();
+      if (containsLaoScript(out)) return out;
+    }
+    return "";
+  } catch (e) {
+    return "";
   }
 }
 

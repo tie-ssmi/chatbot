@@ -541,6 +541,61 @@ function startSilenceDetection(stream) {
     silenceDetectionState.rafId = requestAnimationFrame(monitor);
 }
 
+function containsThaiScript(text) {
+    return /[\u0E00-\u0E7F]/.test(text || '');
+}
+
+function containsLaoScript(text) {
+    return /[\u0E80-\u0EFF]/.test(text || '');
+}
+
+function normalizeTextForInput(text) {
+    return (text || '')
+        .replace(/<br\s*\/?\s*>/gi, '\n')
+        .replace(/<[^>]*>/g, '')
+        .replace(/\*\*(.*?)\*\*/g, '$1')
+        .trim();
+}
+
+async function convertThaiScriptToLao(text) {
+    const userId = localStorage.getItem('ssmi_user_id') || 'Unknown';
+    const userName = localStorage.getItem('ssmi_user_name') || 'ພະນັກງານ';
+    const selectedModel = (document.getElementById('ai-model-select') || {}).value || 'hr';
+
+    const response = await fetch(CHATBOT_CONFIG.API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+            action: 'chat',
+            message: `Convert this Thai-script text into Lao script only. Keep the same meaning and output only Lao text, no explanation:\n${text}`,
+            userId: userId,
+            userName: userName,
+            history: [],
+            files: [],
+            modelCategory: selectedModel,
+            sessionId: currentSessionId
+        }),
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+    });
+
+    const data = await response.json();
+    if (!data.reply) return '';
+    return normalizeTextForInput(data.reply);
+}
+
+async function enforceLaoTranscript(text) {
+    const clean = normalizeTextForInput(text);
+    if (!clean) return clean;
+
+    if (containsThaiScript(clean) && !containsLaoScript(clean)) {
+        try {
+            const converted = await convertThaiScriptToLao(clean);
+            if (converted && containsLaoScript(converted)) return converted;
+        } catch (e) {}
+    }
+
+    return clean;
+}
+
 async function submitRecordedAudio(audioBlob) {
     const base64Audio = await blobToBase64(audioBlob);
     const response = await fetch(CHATBOT_CONFIG.API_URL, {
@@ -556,7 +611,8 @@ async function submitRecordedAudio(audioBlob) {
 
     const data = await response.json();
     if (data.transcript) {
-        userInput.value = data.transcript;
+        const finalTranscript = await enforceLaoTranscript(data.transcript);
+        userInput.value = finalTranscript;
         userInput.focus();
         userInput.setSelectionRange(userInput.value.length, userInput.value.length);
         return;
@@ -639,8 +695,9 @@ if (SpeechRecognition) {
     recognition.lang = CHATBOT_CONFIG.LANGUAGE;
     recognition.continuous = false; recognition.interimResults = false; recognition.maxAlternatives = 1;
     recognition.onstart = () => { isRecording = true; micBtn.classList.add('recording'); };
-    recognition.onresult = (event) => {
-        userInput.value = event.results[0][0].transcript;
+    recognition.onresult = async (event) => {
+        const finalTranscript = await enforceLaoTranscript(event.results[0][0].transcript);
+        userInput.value = finalTranscript;
         userInput.focus();
         userInput.setSelectionRange(userInput.value.length, userInput.value.length);
     };
