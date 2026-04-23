@@ -440,7 +440,7 @@ function toggleInput(enable) {
 // ==========================================
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition; let isRecording = false; let mediaRecorder = null; let recordedChunks = []; let isRecordingFallback = false;
-const SILENCE_TIMEOUT_MS = 5000;
+const SILENCE_TIMEOUT_MS = 3000;
 const SILENCE_RMS_THRESHOLD = 0.02;
 let silenceDetectionState = null;
 
@@ -557,7 +557,8 @@ async function submitRecordedAudio(audioBlob) {
     const data = await response.json();
     if (data.transcript) {
         userInput.value = data.transcript;
-        sendMessage();
+        userInput.focus();
+        userInput.setSelectionRange(userInput.value.length, userInput.value.length);
         return;
     }
 
@@ -638,7 +639,11 @@ if (SpeechRecognition) {
     recognition.lang = CHATBOT_CONFIG.LANGUAGE;
     recognition.continuous = false; recognition.interimResults = false; recognition.maxAlternatives = 1;
     recognition.onstart = () => { isRecording = true; micBtn.classList.add('recording'); };
-    recognition.onresult = (event) => { userInput.value = event.results[0][0].transcript; sendMessage(); };
+    recognition.onresult = (event) => {
+        userInput.value = event.results[0][0].transcript;
+        userInput.focus();
+        userInput.setSelectionRange(userInput.value.length, userInput.value.length);
+    };
     recognition.onnomatch = () => { alert('⚠️ ບໍ່ພົບເຄື່ອງມື ຫຼື ບໍ່ສາມາດແປງສຽງເປັນຂໍ້ຄວາມໄດ້'); };
     recognition.onspeechend = () => { if (isRecording) recognition.stop(); };
     recognition.onend = () => { isRecording = false; micBtn.classList.remove('recording'); };
