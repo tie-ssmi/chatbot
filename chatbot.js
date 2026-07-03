@@ -17,17 +17,34 @@ window.onload = function() {
     if (!localStorage.getItem('ssmi_user_id')) {
         if (!window.location.href.includes('login.html')) window.location.href = 'login.html';
     } else {
+<<<<<<< HEAD
         if (document.getElementById('chat-app')) showChat();
         loadChatThreads(); 
         loadChatHistory(); 
         checkQuotaOnLoad(); 
         
         // 🌟 โค้ดที่เปลี่ยน: เอาชื่อไปโชว์ในกล่อง Settings แทน
+=======
+        // 🌟 1. ดึงชื่อมาแสดงก่อนเป็นอันดับแรกสุด! (แก้ปัญหาชื่อค้าง "ກຳລັງໂຫຼດ...")
+>>>>>>> cc0dd5d (New Update Guidline)
         const userName = localStorage.getItem('ssmi_user_name');
         if (userName) {
             const userBox = document.getElementById('settings-user-name');
             if (userBox) userBox.innerText = userName;
         }
+<<<<<<< HEAD
+=======
+
+        if (document.getElementById('chat-app')) showChat();
+        loadChatThreads(); 
+        loadChatHistory(); 
+        checkQuotaOnLoad(); 
+        
+        // 🌟 2. หน่วงเวลาให้เว็บโหลดเสร็จสมบูรณ์ 1.5 วินาที ค่อยเรียก Guide Line
+        setTimeout(() => {
+            startGuideTour();
+        }, 1500);
+>>>>>>> cc0dd5d (New Update Guidline)
     }
 };
 
@@ -765,4 +782,189 @@ function closeSettingsModal(event) {
     if (event) event.stopPropagation(); // ป้องกันการคลิกทะลุ
     const modal = document.getElementById('settings-modal');
     if (modal) modal.style.display = 'none';
+<<<<<<< HEAD
+=======
+}
+
+// ==========================================
+// 🌟 ระบบเปลี่ยนรหัสผ่าน (Change Password)
+// ==========================================
+function togglePasswordForm() {
+    const form = document.getElementById('password-change-form');
+    if (form.style.display === 'none') {
+        form.style.display = 'block';
+        document.getElementById('old-password').value = '';
+        document.getElementById('new-password').value = '';
+        document.getElementById('confirm-new-password').value = '';
+        document.getElementById('password-msg').style.display = 'none';
+    } else {
+        form.style.display = 'none';
+    }
+}
+
+async function submitPasswordChange() {
+    const oldPass = document.getElementById('old-password').value.trim();
+    const newPass = document.getElementById('new-password').value.trim();
+    const confirmPass = document.getElementById('confirm-new-password').value.trim();
+    const msgBox = document.getElementById('password-msg');
+    const btn = document.getElementById('btn-submit-pass');
+    const userId = localStorage.getItem('ssmi_user_id');
+
+    if (!oldPass || !newPass || !confirmPass) {
+        msgBox.innerText = "ກະລຸນາປ້ອນຂໍ້ມູນໃຫ້ຄົບ";
+        msgBox.style.color = "red";
+        msgBox.style.display = 'block';
+        return;
+    }
+    if (newPass !== confirmPass) {
+        msgBox.innerText = "ລະຫັດຜ່ານໃໝ່ບໍ່ຕົງກັນ";
+        msgBox.style.color = "red";
+        msgBox.style.display = 'block';
+        return;
+    }
+
+    msgBox.style.display = 'none';
+    btn.innerText = "ກຳລັງບັນທຶກ...";
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(CHATBOT_CONFIG.API_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'changePassword',
+                userId: userId,
+                oldPassword: oldPass,
+                newPassword: newPass
+            }),
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            msgBox.innerText = "ປ່ຽນລະຫັດຜ່ານສຳເລັດແລ້ວ!";
+            msgBox.style.color = "green";
+            msgBox.style.display = 'block';
+            setTimeout(() => {
+                togglePasswordForm();
+                msgBox.style.display = 'none';
+            }, 2000); // ซ่อนฟอร์มอัตโนมัติหลังเปลี่ยนสำเร็จ
+        } else {
+            msgBox.innerText = data.message || "ເກີດຂໍ້ຜິດພາດ";
+            msgBox.style.color = "red";
+            msgBox.style.display = 'block';
+        }
+    } catch (e) {
+        msgBox.innerText = "ບໍ່ສາມາດເຊື່ອມຕໍ່ລະບົບໄດ້";
+        msgBox.style.color = "red";
+        msgBox.style.display = 'block';
+    }
+    
+    btn.innerText = "ບັນທຶກ";
+    btn.disabled = false;
+}
+// ==========================================
+// 🌟 ระบบ Guide Line สอนใช้งาน (Intro.js) - ฉบับกันค้าง
+// ==========================================
+function startGuideTour() {
+    // ป้องกัน Error กรณีเว็บโหลดสคริปต์ Intro.js ไม่ทัน
+    if (typeof introJs === 'undefined') {
+        console.log("⚠️ Intro.js ຍັງບໍ່ພ້ອມໃຊ້ງານ");
+        return;
+    }
+
+    const hasSeenGuide = localStorage.getItem('ssmi_has_seen_guide');
+    
+    if (!hasSeenGuide) {
+        // บังคับปิดกล่อง Settings ก่อนเสมอ เพื่อไม่ให้จอค้าง
+        const modal = document.getElementById('settings-modal');
+        if (modal) modal.style.display = 'none';
+
+        introJs().setOptions({
+            nextLabel: 'ຕໍ່ໄປ ➔',
+            prevLabel: '⬅ ກັບຄືນ',
+            doneLabel: '✅ ເຂົ້າໃຈແລ້ວ',
+            showStepNumbers: true,
+            showBullets: true,
+            exitOnOverlayClick: false, // บังคับให้ผู้ใช้กดปุ่มเท่านั้น
+            exitOnEsc: false
+        }).oncomplete(function() {
+            localStorage.setItem('ssmi_has_seen_guide', 'true');
+        }).onexit(function() {
+            localStorage.setItem('ssmi_has_seen_guide', 'true');
+        }).start();
+    }
+}
+
+function forceStartGuide() {
+    // 1. บังคับปิดกล่อง Settings ทันที
+    const modal = document.getElementById('settings-modal');
+    if (modal) modal.style.display = 'none';
+    
+    // 2. ล้างค่าประวัติการดู
+    localStorage.removeItem('ssmi_has_seen_guide');
+    
+    // 3. หน่วงเวลา 0.5 วิให้กล่องพับเก็บเสร็จก่อน แล้วค่อยเริ่ม Guide
+    setTimeout(() => {
+        startGuideTour();
+    }, 500);
+}
+// ==========================================
+// 🌟 ระบบ Mini Guide: สอนเทคนิคการตั้งคำถาม (เด้งทุก 7 วัน)
+// ==========================================
+function checkAndShowPromptGuide() {
+    const lastSeen = localStorage.getItem('ssmi_last_prompt_guide');
+    const now = new Date().getTime();
+    const oneWeek = 7 * 24 * 60 * 60 * 1000; // คำนวณเวลา 7 วัน (เป็นมิลลิวินาที)
+
+    // ถ้าไม่เคยดูเลย หรือ ดูครั้งล่าสุดเกิน 7 วันไปแล้ว -> ให้เด้งขึ้นมา
+    if (!lastSeen || (now - parseInt(lastSeen)) > oneWeek) {
+        startPromptGuide();
+    }
+}
+
+function startPromptGuide() {
+    if (typeof introJs === 'undefined') return;
+
+    // บังคับปิดกล่อง Setting ก่อน (เผื่อเปิดค้างไว้)
+    const modal = document.getElementById('settings-modal');
+    if (modal) modal.style.display = 'none';
+
+    // สร้างเนื้อหา Guide สอนตั้งคำถาม (2 หน้า)
+    introJs().setOptions({
+        steps: [
+            {
+                title: '💡 ເຕັກນິກການຖາມຄຳຖາມ (1/2)',
+                intro: 'ເພື່ອໃຫ້ SINA ຕອບໄດ້ຕົງຈຸດທີ່ສຸດ, ໃຫ້ຕັ້ງຖາມທີ່ຊັດເຈນ:<br><br>❌ <b>ບໍ່ຄວນຖາມສັ້ນໆ ຫຼື ຖາມຍາວເກີນໄປ (2-3 ຄຳຖາມຊ້ອນກັນເຊັ່ນ:</b> "ພັກທ່ຽງ", "ເບີກເງິນບໍລິການ", "ເບີກເງິນນະໂຍບາຍ", "ພະນັກງານວິຊາການສາມາດເບີກເງິນນະໂຍບາຍແຕ່ງງານໄດ້ທໍ່ໃດ, ສາມາດເບີກໄດ້ຈັກເທື່ອ ແລະ ຖ້າໄດ້ຮັບແລ້ວສາມາດຮັບຕື່ມໄດ້ບໍ່❌ "<br>✅ <b>ຄວນຖາມລະບຸລາຍລະອຽດທີ່ຊັດເຈນເຊັ່ນ:</b> <br>"ພະນັກງານ 95% ສາມາດໃຊ້ວັນພັກປະຈຳປີໄດ້ຈັກວັນ?", <br>"ຢາກລາພັກ 10 ວັນ ຕ້ອງເຮັດແບບໃດ", <br>"ວິທີປະເມີນລູກຄ້າ ສຳລັບຫຼັກຊັບຄ້ຳປະກັນ", <br>"ສິດໃນການອະນຸມັດເງິນຝາກ ມີແນວໃດແດ່"<br>📌 <i>ຢ່າລືມບອກເງື່ອນໄຂເພີ່ມເຕີມ (ຖ້າມີ) ເຊັ່ນ: ຕຳແໜ່ງ, ເພດ ເພື່ອໃຫ້ໄດ້ຄຳຕອບທີ່ຊັດເຈນຂຶ້ນ.</i>'
+            },
+            {
+                element: document.querySelector('#user-input'),
+                title: '📎 ການຖາມເມື່ອແນບເອກະສານ (2/2)',
+                intro: 'ຖ້າແນບຮູບ ຫຼື ໄຟລ໌, ຕ້ອງສັ່ງສະເໝີວ່າໃຫ້ SINA ເຮັດຫຍັງ:<br><br>❌ <b>ບໍ່ຄວນພິມແຕ່:</b> "ເບິ່ງໃຫ້ແດ່"<br>✅ <b>ຄວນພິມວ່າ:</b> "ຮູບນີ້ແມ່ນຫຍັງ ຕ້ອງລົງລາຍຈ່າຍໝວດໃດ", "ບິນນີ້ຕ້ອງລົງລາຍຈ່າຍໝວດໃດ", ຊ່ວຍກວດສອບປຽບທຽບລາຄາໃຫ້ແດ່ ວ່າຖືກຕ້ອງຕາມລະບຽບການຈັດຊື້ຫຼືບໍ່?"<br>📌 <i>ໝາຍເຫດ: ການອັບຮູບ ຫຼື ຟາຍ SINA ອາດຈະຕອບບໍ່ຖຶກຕ້ອງທັ້ງໝົດ ຕ້ອງໄປກວດທຽບກັບລະບຽບທຸກຄັ້ງ ກ່ອນນຳມາໃຊ້ຈິງ</i>'
+            }
+        ],
+        nextLabel: 'ຕໍ່ໄປ ➔',
+        prevLabel: '⬅ ກັບຄືນ',
+        doneLabel: '✅ ເຂົ້າໃຈແລ້ວ',
+        showStepNumbers: false,
+        showBullets: true,
+        exitOnOverlayClick: false, // บังคับให้กดปุ่มเท่านั้น
+        exitOnEsc: false
+    }).oncomplete(function() {
+        // เมื่อกดเข้าใจแล้ว ให้บันทึกเวลาปัจจุบันลงไป
+        localStorage.setItem('ssmi_last_prompt_guide', new Date().getTime().toString());
+    }).onexit(function() {
+        // กรณีกดออกกลางคัน ก็บันทึกเวลาไว้เช่นกัน
+        localStorage.setItem('ssmi_last_prompt_guide', new Date().getTime().toString());
+    }).start();
+}
+
+function forceStartPromptGuide() {
+    const modal = document.getElementById('settings-modal');
+    if (modal) modal.style.display = 'none';
+    
+    // หน่วงเวลาเล็กน้อยให้กล่อง Setting พับเก็บก่อน
+    setTimeout(() => {
+        startPromptGuide();
+    }, 500);
+>>>>>>> cc0dd5d (New Update Guidline)
 }
