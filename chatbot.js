@@ -13,27 +13,17 @@ if (!currentSessionId) {
     localStorage.setItem('ssmi_current_session', currentSessionId);
 }
 
+// 🌟 แก้ไข Onload เพื่อกันหน้าจอค้างและเรียก Guide
 window.onload = function() {
     if (!localStorage.getItem('ssmi_user_id')) {
         if (!window.location.href.includes('login.html')) window.location.href = 'login.html';
     } else {
-<<<<<<< HEAD
-        if (document.getElementById('chat-app')) showChat();
-        loadChatThreads(); 
-        loadChatHistory(); 
-        checkQuotaOnLoad(); 
-        
-        // 🌟 โค้ดที่เปลี่ยน: เอาชื่อไปโชว์ในกล่อง Settings แทน
-=======
         // 🌟 1. ดึงชื่อมาแสดงก่อนเป็นอันดับแรกสุด! (แก้ปัญหาชื่อค้าง "ກຳລັງໂຫຼດ...")
->>>>>>> cc0dd5d (New Update Guidline)
         const userName = localStorage.getItem('ssmi_user_name');
         if (userName) {
             const userBox = document.getElementById('settings-user-name');
             if (userBox) userBox.innerText = userName;
         }
-<<<<<<< HEAD
-=======
 
         if (document.getElementById('chat-app')) showChat();
         loadChatThreads(); 
@@ -44,7 +34,6 @@ window.onload = function() {
         setTimeout(() => {
             startGuideTour();
         }, 1500);
->>>>>>> cc0dd5d (New Update Guidline)
     }
 };
 
@@ -172,7 +161,7 @@ async function loadChatHistory(isLoadMore = false) {
                 userId: userId, 
                 offset: historyOffset, 
                 limit: HISTORY_LIMIT,
-                sessionId: currentSessionId // 🌟 ส่ง Session ปัจจุบันไปด้วย
+                sessionId: currentSessionId 
             }),
             headers: { 'Content-Type': 'text/plain;charset=utf-8' }
         });
@@ -341,7 +330,7 @@ async function sendMessage() {
                 history: currentChatHistory,
                 files: payloadFiles,
                 modelCategory: selectedModel,
-                sessionId: currentSessionId // 🌟 ส่งรหัสห้องแชท
+                sessionId: currentSessionId 
             }),
             headers: { 'Content-Type': 'text/plain;charset=utf-8' }
         });
@@ -372,7 +361,7 @@ async function sendMessage() {
                 const flatErrorMsg = data.error.replace(/\n/g, '   |   ');
                 lockInputWithMarquee(`🔒 ${flatErrorMsg}`);
             } else {
-                // 🌟 สำคัญมาก: ถ้าเป็น Error อื่นๆ (เช่น เซิร์ฟเวอร์ล่ม 503) ต้องปลดล็อกให้ผู้ใช้พิมพ์ถามใหม่ได้
+                // 🌟 สำคัญมาก: ถ้าเป็น Error อื่นๆ ต้องปลดล็อกให้ผู้ใช้พิมพ์ถามใหม่ได้
                 toggleInput(true);
             }
         }
@@ -453,7 +442,7 @@ function toggleInput(enable) {
 }
 
 // ==========================================
-// 5. ระบบเสียง & UI Helpers (ของเดิม)
+// 5. ระบบเสียง & UI Helpers 
 // ==========================================
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition; let isRecording = false; let mediaRecorder = null; let recordedChunks = []; let isRecordingFallback = false;
@@ -575,9 +564,7 @@ function normalizeTextForInput(text) {
 }
 
 function convertThaiScriptToLao(text) {
-    // Direct Unicode character mapping: Thai → Lao
     const map = {
-        // Consonants
         'ก': 'ກ', 'ข': 'ຂ', 'ฃ': 'ຂ', 'ค': 'ຄ', 'ฅ': 'ຄ', 'ฆ': 'ຄ',
         'ง': 'ງ', 'จ': 'ຈ', 'ฉ': 'ສ', 'ช': 'ຊ', 'ซ': 'ຊ', 'ฌ': 'ຊ',
         'ญ': 'ຍ', 'ฎ': 'ດ', 'ฏ': 'ຕ', 'ฐ': 'ຖ', 'ฑ': 'ທ', 'ฒ': 'ທ',
@@ -586,15 +573,11 @@ function convertThaiScriptToLao(text) {
         'ฟ': 'ຟ', 'ภ': 'ພ', 'ม': 'ມ', 'ย': 'ຍ', 'ร': 'ຣ', 'ล': 'ລ',
         'ว': 'ວ', 'ศ': 'ສ', 'ษ': 'ສ', 'ส': 'ສ', 'ห': 'ຫ', 'ฬ': 'ລ',
         'อ': 'ອ', 'ฮ': 'ຮ',
-        // Vowels & diacritics
         'ะ': 'ະ', 'ั': 'ັ', 'า': 'າ', 'ำ': 'ຳ', 'ิ': 'ິ', 'ี': 'ີ',
         'ึ': 'ຶ', 'ื': 'ື', 'ุ': 'ຸ', 'ู': 'ູ', 'เ': 'ເ', 'แ': 'ແ',
         'โ': 'ໂ', 'ใ': 'ໃ', 'ไ': 'ໄ', '็': 'ໍ', 'ํ': 'ໍ',
-        // Tone marks
         '่': '່', '้': '້', '๊': '໊', '๋': '໋',
-        // Punctuation & symbols
         'ๆ': 'ໆ', '฿': '₭',
-        // Thai digits → Lao digits
         '๐': '໐', '๑': '໑', '๒': '໒', '๓': '໓', '๔': '໔',
         '๕': '໕', '๖': '໖', '๗': '໗', '๘': '໘', '๙': '໙'
     };
@@ -604,12 +587,10 @@ function convertThaiScriptToLao(text) {
 function enforceLaoTranscript(text) {
     const clean = normalizeTextForInput(text);
     if (!clean) return clean;
-
     if (containsThaiScript(clean)) {
         const converted = convertThaiScriptToLao(clean);
         if (converted && containsLaoScript(converted)) return converted;
     }
-
     return clean;
 }
 
@@ -779,11 +760,9 @@ function toggleSettingsModal() {
 }
 
 function closeSettingsModal(event) {
-    if (event) event.stopPropagation(); // ป้องกันการคลิกทะลุ
+    if (event) event.stopPropagation();
     const modal = document.getElementById('settings-modal');
     if (modal) modal.style.display = 'none';
-<<<<<<< HEAD
-=======
 }
 
 // ==========================================
@@ -847,7 +826,7 @@ async function submitPasswordChange() {
             setTimeout(() => {
                 togglePasswordForm();
                 msgBox.style.display = 'none';
-            }, 2000); // ซ่อนฟอร์มอัตโนมัติหลังเปลี่ยนสำเร็จ
+            }, 2000); 
         } else {
             msgBox.innerText = data.message || "ເກີດຂໍ້ຜິດພາດ";
             msgBox.style.color = "red";
@@ -862,11 +841,11 @@ async function submitPasswordChange() {
     btn.innerText = "ບັນທຶກ";
     btn.disabled = false;
 }
+
 // ==========================================
 // 🌟 ระบบ Guide Line สอนใช้งาน (Intro.js) - ฉบับกันค้าง
 // ==========================================
 function startGuideTour() {
-    // ป้องกัน Error กรณีเว็บโหลดสคริปต์ Intro.js ไม่ทัน
     if (typeof introJs === 'undefined') {
         console.log("⚠️ Intro.js ຍັງບໍ່ພ້ອມໃຊ້ງານ");
         return;
@@ -875,7 +854,6 @@ function startGuideTour() {
     const hasSeenGuide = localStorage.getItem('ssmi_has_seen_guide');
     
     if (!hasSeenGuide) {
-        // บังคับปิดกล่อง Settings ก่อนเสมอ เพื่อไม่ให้จอค้าง
         const modal = document.getElementById('settings-modal');
         if (modal) modal.style.display = 'none';
 
@@ -885,7 +863,7 @@ function startGuideTour() {
             doneLabel: '✅ ເຂົ້າໃຈແລ້ວ',
             showStepNumbers: true,
             showBullets: true,
-            exitOnOverlayClick: false, // บังคับให้ผู้ใช้กดปุ่มเท่านั้น
+            exitOnOverlayClick: false, 
             exitOnEsc: false
         }).oncomplete(function() {
             localStorage.setItem('ssmi_has_seen_guide', 'true');
@@ -896,27 +874,24 @@ function startGuideTour() {
 }
 
 function forceStartGuide() {
-    // 1. บังคับปิดกล่อง Settings ทันที
     const modal = document.getElementById('settings-modal');
     if (modal) modal.style.display = 'none';
     
-    // 2. ล้างค่าประวัติการดู
     localStorage.removeItem('ssmi_has_seen_guide');
     
-    // 3. หน่วงเวลา 0.5 วิให้กล่องพับเก็บเสร็จก่อน แล้วค่อยเริ่ม Guide
     setTimeout(() => {
         startGuideTour();
     }, 500);
 }
+
 // ==========================================
 // 🌟 ระบบ Mini Guide: สอนเทคนิคการตั้งคำถาม (เด้งทุก 7 วัน)
 // ==========================================
 function checkAndShowPromptGuide() {
     const lastSeen = localStorage.getItem('ssmi_last_prompt_guide');
     const now = new Date().getTime();
-    const oneWeek = 7 * 24 * 60 * 60 * 1000; // คำนวณเวลา 7 วัน (เป็นมิลลิวินาที)
+    const oneWeek = 7 * 24 * 60 * 60 * 1000; 
 
-    // ถ้าไม่เคยดูเลย หรือ ดูครั้งล่าสุดเกิน 7 วันไปแล้ว -> ให้เด้งขึ้นมา
     if (!lastSeen || (now - parseInt(lastSeen)) > oneWeek) {
         startPromptGuide();
     }
@@ -925,11 +900,9 @@ function checkAndShowPromptGuide() {
 function startPromptGuide() {
     if (typeof introJs === 'undefined') return;
 
-    // บังคับปิดกล่อง Setting ก่อน (เผื่อเปิดค้างไว้)
     const modal = document.getElementById('settings-modal');
     if (modal) modal.style.display = 'none';
 
-    // สร้างเนื้อหา Guide สอนตั้งคำถาม (2 หน้า)
     introJs().setOptions({
         steps: [
             {
@@ -947,13 +920,11 @@ function startPromptGuide() {
         doneLabel: '✅ ເຂົ້າໃຈແລ້ວ',
         showStepNumbers: false,
         showBullets: true,
-        exitOnOverlayClick: false, // บังคับให้กดปุ่มเท่านั้น
+        exitOnOverlayClick: false, 
         exitOnEsc: false
     }).oncomplete(function() {
-        // เมื่อกดเข้าใจแล้ว ให้บันทึกเวลาปัจจุบันลงไป
         localStorage.setItem('ssmi_last_prompt_guide', new Date().getTime().toString());
     }).onexit(function() {
-        // กรณีกดออกกลางคัน ก็บันทึกเวลาไว้เช่นกัน
         localStorage.setItem('ssmi_last_prompt_guide', new Date().getTime().toString());
     }).start();
 }
@@ -962,9 +933,7 @@ function forceStartPromptGuide() {
     const modal = document.getElementById('settings-modal');
     if (modal) modal.style.display = 'none';
     
-    // หน่วงเวลาเล็กน้อยให้กล่อง Setting พับเก็บก่อน
     setTimeout(() => {
         startPromptGuide();
     }, 500);
->>>>>>> cc0dd5d (New Update Guidline)
 }
