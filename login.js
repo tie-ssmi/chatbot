@@ -9,6 +9,19 @@ function handleLoginEnter(event) {
     if (event.key === 'Enter') attemptLogin();
 }
 
+function togglePasswordVisibility() {
+    const passwordInput = document.getElementById('password');
+    const toggleBtn = document.getElementById('password-toggle-btn');
+
+    if (!passwordInput || !toggleBtn) return;
+
+    const isPasswordHidden = passwordInput.type === 'password';
+    passwordInput.type = isPasswordHidden ? 'text' : 'password';
+    toggleBtn.textContent = isPasswordHidden ? '🙈' : '👁';
+    toggleBtn.setAttribute('aria-label', isPasswordHidden ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน');
+    passwordInput.focus();
+}
+
 async function attemptLogin() {
     const user = document.getElementById('username').value.trim();
     const pass = document.getElementById('password').value.trim();
