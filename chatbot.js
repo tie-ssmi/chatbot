@@ -864,7 +864,8 @@ function startGuideTour() {
             showStepNumbers: true,
             showBullets: true,
             exitOnOverlayClick: false, 
-            exitOnEsc: false
+            exitOnEsc: false,
+            scrollToElement: false // 🌟 ปิดการเลื่อนหน้าจออัตโนมัติ (แก้ปัญหาจอกระตุก/กล่องหาย)
         }).oncomplete(function() {
             localStorage.setItem('ssmi_has_seen_guide', 'true');
         }).onexit(function() {
@@ -912,7 +913,8 @@ function startPromptGuide() {
             {
                 element: document.querySelector('#user-input'),
                 title: '📎 ການຖາມເມື່ອແນບເອກະສານ (2/2)',
-                intro: 'ຖ້າແນບຮູບ ຫຼື ໄຟລ໌, ຕ້ອງສັ່ງສະເໝີວ່າໃຫ້ SINA ເຮັດຫຍັງ:<br><br>❌ <b>ບໍ່ຄວນພິມແຕ່:</b> "ເບິ່ງໃຫ້ແດ່"<br>✅ <b>ຄວນພິມວ່າ:</b> "ຮູບນີ້ແມ່ນຫຍັງ ຕ້ອງລົງລາຍຈ່າຍໝວດໃດ", "ບິນນີ້ຕ້ອງລົງລາຍຈ່າຍໝວດໃດ", ຊ່ວຍກວດສອບປຽບທຽບລາຄາໃຫ້ແດ່ ວ່າຖືກຕ້ອງຕາມລະບຽບການຈັດຊື້ຫຼືບໍ່?"<br>📌 <i>ໝາຍເຫດ: ການອັບຮູບ ຫຼື ຟາຍ SINA ອາດຈະຕອບບໍ່ຖຶກຕ້ອງທັ້ງໝົດ ຕ້ອງໄປກວດທຽບກັບລະບຽບທຸກຄັ້ງ ກ່ອນນຳມາໃຊ້ຈິງ</i>'
+                intro: 'ຖ້າແນບຮູບ ຫຼື ໄຟລ໌, ຕ້ອງສັ່ງສະເໝີວ່າໃຫ້ SINA ເຮັດຫຍັງ:<br><br>❌ <b>ບໍ່ຄວນພິມແຕ່:</b> "ເບິ່ງໃຫ້ແດ່"<br>✅ <b>ຄວນພິມວ່າ:</b> "ຮູບນີ້ແມ່ນຫຍັງ ຕ້ອງລົງລາຍຈ່າຍໝວດໃດ", "ບິນນີ້ຕ້ອງລົງລາຍຈ່າຍໝວດໃດ", ຊ່ວຍກວດສອບປຽບທຽບລາຄາໃຫ້ແດ່ ວ່າຖືກຕ້ອງຕາມລະບຽບການຈັດຊື້ຫຼືບໍ່?"<br>📌 <i>ໝາຍເຫດ: ການອັບຮູບ ຫຼື ຟາຍ SINA ອາດຈະຕອບບໍ່ຖຶກຕ້ອງທັ້ງໝົດ ຕ້ອງໄປກວດທຽບກັບລະບຽບທຸກຄັ້ງ ກ່ອນນຳມາໃຊ້ຈິງ</i>',
+                position: 'top' // 🌟 บังคับให้อยู่ด้านบนของช่องพิมพ์เสมอ
             }
         ],
         nextLabel: 'ຕໍ່ໄປ ➔',
@@ -921,7 +923,8 @@ function startPromptGuide() {
         showStepNumbers: false,
         showBullets: true,
         exitOnOverlayClick: false, 
-        exitOnEsc: false
+        exitOnEsc: false,
+        scrollToElement: false // 🌟 ปิดการเลื่อนหน้าจออัตโนมัติ
     }).oncomplete(function() {
         localStorage.setItem('ssmi_last_prompt_guide', new Date().getTime().toString());
     }).onexit(function() {

@@ -177,6 +177,9 @@
               <button onclick="togglePasswordForm()" style="width: 100%; padding: 10px; margin-top: 15px; border-radius: 8px; border: 1px solid #c8dae2; background: #eef5f8; color: #176b8a; font-weight: bold; cursor: pointer;">
                   🔑 ປ່ຽນລະຫັດຜ່ານ
               </button>
+              <button onclick="openWarningModal()" style="width: 100%; padding: 10px; margin-top: 10px; border-radius: 8px; border: 1px solid #f4a259; background: #fff8ef; color: #b96a00; font-weight: bold; cursor: pointer;">
+                  ⚠️ ຄຳເຕືອນກ່ອນນຳໃຊ້
+              </button>
 
               <div id="password-change-form" style="display: none; margin-top: 10px; text-align: left; background: #f9f9f9; padding: 12px; border-radius: 8px; border: 1px solid #eee;">
                   <input type="password" id="old-password" placeholder="ລະຫັດຜ່ານເກົ່າ..." style="width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box;">
@@ -198,6 +201,22 @@
           </div>
       </div>
       
+      <div id="warning-modal" class="warning-modal" style="display: none;" onclick="closeWarningModal(event)">
+          <div class="warning-dialog" onclick="event.stopPropagation()">
+              <button class="close-warning-btn" onclick="closeWarningModal()">&times;</button>
+              <h3>⚠️ ຄຳເຕືອນກ່ອນນຳໃຊ້ SINA</h3>
+              <ul class="warning-list">
+                  <li>ມີການຈຳກັດຄຳຖາມຄື 01 ຜູ້ໃຊ້ສາມາດຖາມຄຳຖາມໄດ້ 10 ຄຳຖາມ/02 ຊົ່ວໂມງ</li>
+                  <li>ບໍ່ຄວນນຳຄໍາຕອບທີ່ໄດ້ທັງຫມົດໄປນຳໃຊ້ເລີຍ ຕ້ອງກວດສອບໃນລະບຽບອີກຄັ້ງ</li>
+                  <li>ການແນບຮູບພາບ ຫຼື ໄຟລ໌ PDF ຈະໃຊ້ເວລາການຄິດຄຳຕອບ ດົນກວ່າປົກກະຕິ ແລະ ການຖາມຄຳຖາມທີ່ຢູ່ນອກລະບຽບ ກໍເຊັ່ນດຽວກັນ</li>
+                  <li>ຖ້າການຖາມຄຳຖາມບໍ່ຊັດເຈນ ອາດເຮັດໃຫ້ SINA ຕອບຄຳຖາມບໍ່ຕົງກັບຄວາມຕ້ອງການ</li>
+                  <li>ໃຊ້ SINA ເພື່ອຊ່ວຍຊອກຫາລະບຽບ, ບໍ່ແມ່ນໃຊ້ເພື່ອການເຮັດວຽກທັງໝົດ</li>
+                  <li>SINA ເປັນ AI ມັນສາມາດມີອາການ ມົ້ວຂໍ້ມູນໄດ້. ດັ່ງນັ້ນກ່ອນທີ່ຈະນຳເອົາຂໍ້ມູນທີ່ໄດ້ ໄປນຳໃຊ້ແທ້ ຕ້ອງກວດສອບຄວາມຖຶກຕ້ອງຄືນກ່ອນ ທຸກຄັ້ງ</li>
+                  <li>ມີອາການ ERROR ເນື່ອງຈາກ SINA ລຸ້ນຕົ້ນແບບ ແມ່ນລຸ້ນທຳອິດທີ່ພັດທະນາຂື້ນມາ ອາດເຮັດໃຫ້ມີອາການຕິດຂັດ ຫຼື ຕອບຄຳຖາມບໍ່ຕົງກັບຄວາມຕ້ອງການເທົ່າທີ່ຄວນ</li>
+              </ul>
+          </div>
+      </div>
+
       <div class="chat-area">
        <div class="chat-messages" id="chat-messages">
         <div
@@ -511,6 +530,18 @@
           popup.classList.remove("show");
         }
       });
+      function openWarningModal() {
+        const modal = document.getElementById("warning-modal");
+        if (modal) modal.style.display = "flex";
+      }
+
+      function closeWarningModal(event) {
+        const modal = document.getElementById("warning-modal");
+        if (!modal) return;
+        if (event && event.target !== modal) return;
+        modal.style.display = "none";
+      }
+
       document.addEventListener("DOMContentLoaded", () => {
         const savedValue = localStorage.getItem("ssmi_saved_model_value");
         const savedName = localStorage.getItem("ssmi_saved_model_name");
