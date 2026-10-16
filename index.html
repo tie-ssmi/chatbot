@@ -364,114 +364,100 @@
             </svg>
           </button>
           <div id="model-popup-menu" class="model-popup">
-            <div
-              class="model-item active"
-              onclick="selectModel('hr', 'ລະບຽບພະນັກງານ', this)"
-            >
-              <div class="model-text">
-                <div class="model-title">
-                  ✨ ລະບຽບວ່າດ້ວຍພະນັກງານ ແລະ ການບໍລິຫານບຸກຄະລາກອນ -
-                  ຄູ່ມືພະນັກງານ
-                </div>
-                <div class="model-desc">
-                  ລະບຽບວ່າດ້ວຍພະນັກງານ ແລະ ການບໍລິຫານບຸກຄະລາກອນ - ຄູ່ມືພະນັກງານ
-                </div>
-              </div>
-              <svg
-                class="check-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="3"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M20 6 9 17l-5-5" />
-              </svg>
+            
+            <!-- 🌟 สวิตช์สลับแท็บ ระเบียบ / กระบวนการ -->
+            <div class="model-popup-tabs">
+              <button type="button" class="model-tab active" id="tab-btn-reg" onclick="switchModelTab('reg')">📜 ລະບຽບການ</button>
+              <button type="button" class="model-tab" id="tab-btn-proc" onclick="switchModelTab('proc')">🔄 ຂະບວນການເຮັດວຽກ</button>
             </div>
-            <div
-              class="model-item"
-              onclick="selectModel('expense', 'ລາຍຈ່າຍ-ລົງບັນຊີ', this)"
-            >
-              <div class="model-text">
-                <div class="model-title">💰 ຄຸ້ມຄອງລາຍຈ່າຍ ແລະ ການລົງບັນຊີ</div>
-                <div class="model-desc">
-                  ລະບຽບວ່າດ້ວຍການຄຸ້ມຄອງລາຍຈ່າຍ ແລະ ການລົງບັນຊີ
+
+            <!-- 🌟 แท็บที่ 1: หมวดระเบียบการ (ของเดิม) -->
+            <div id="tab-content-reg" class="model-tab-content">
+              <div class="model-item active" onclick="selectModel('hr', 'ລະບຽບພະນັກງານ', this)">
+                <div class="model-text">
+                  <div class="model-title">✨ ລະບຽບການບຸກຄະລາກອນ</div>
+                  <div class="model-desc">ລະບຽບວ່າດ້ວຍພະນັກງານ ແລະ ການບໍລິຫານ</div>
                 </div>
+                <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
               </div>
-              <svg
-                class="check-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="3"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M20 6 9 17l-5-5" />
-              </svg>
-            </div>
-            <div
-              class="model-item"
-              onclick="selectModel('loan_gov', 'ສິນເຊື່ອລັດ', this)"
-            >
-              <div class="model-text">
-                <div class="model-title">🏛️ ສິນເຊື່ອ (ລັດຖະກອນ)</div>
-                <div class="model-desc">ລະບຽບວ່າດ້ວຍສິນເຊື່ອ ລັດຖະກອນ</div>
-              </div>
-              <svg
-                class="check-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="3"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M20 6 9 17l-5-5" />
-              </svg>
-            </div>
-            <div
-              class="model-item"
-              onclick="selectModel('loan_sec', 'ສິນເຊື່ອຫຼັກຊັບ', this)"
-            >
-              <div class="model-text">
-                <div class="model-title">🏠 ສິນເຊື່ອ (ຫຼັກຊັບ)</div>
-                <div class="model-desc">
-                  ລະບຽບວ່າດ້ວຍສິນເຊື່ອ ຫຼັກຊັບຄ້ຳປະກັນ
+              <div class="model-item" onclick="selectModel('expense', 'ລາຍຈ່າຍ-ລົງບັນຊີ', this)">
+                <div class="model-text">
+                  <div class="model-title">💰 ຄຸ້ມຄອງລາຍຈ່າຍ ແລະ ບັນຊີ</div>
+                  <div class="model-desc">ລະບຽບວ່າດ້ວຍການຄຸ້ມຄອງລາຍຈ່າຍ</div>
                 </div>
+                <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
               </div>
-              <svg
-                class="check-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="3"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M20 6 9 17l-5-5" />
-              </svg>
+              <div class="model-item" onclick="selectModel('loan_gov', 'ສິນເຊື່ອລັດ', this)">
+                <div class="model-text">
+                  <div class="model-title">🏛️ ສິນເຊື່ອ (ລັດຖະກອນ)</div>
+                  <div class="model-desc">ລະບຽບວ່າດ້ວຍສິນເຊື່ອ ລັດຖະກອນ</div>
+                </div>
+                <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+              </div>
+              <div class="model-item" onclick="selectModel('loan_sec', 'ສິນເຊື່ອຫຼັກຊັບ', this)">
+                <div class="model-text">
+                  <div class="model-title">🏠 ສິນເຊື່ອ (ຫຼັກຊັບ)</div>
+                  <div class="model-desc">ລະບຽບວ່າດ້ວຍສິນເຊື່ອ ຫຼັກຊັບຄ້ຳປະກັນ</div>
+                </div>
+                <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+              </div>
+              <div class="model-item" onclick="selectModel('deposit', 'ເງິນຝາກ', this)">
+                <div class="model-text">
+                  <div class="model-title">🏦 ລະບຽບເງິນຝາກ</div>
+                  <div class="model-desc">ລະບຽບວ່າດ້ວຍເງິນຝາກ</div>
+                </div>
+                <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+              </div>
             </div>
-            <div
-              class="model-item"
-              onclick="selectModel('deposit', 'ເງິນຝາກ', this)"
-            >
-              <div class="model-text">
-                <div class="model-title">🏦 ລະບຽບເງິນຝາກ</div>
-                <div class="model-desc">ລະບຽບວ່າດ້ວຍເງິນຝາກ</div>
+
+            <!-- 🌟 แท็บที่ 2: หมวดกระบวนการ (ของใหม่) -->
+            <div id="tab-content-proc" class="model-tab-content" style="display: none;">
+              <div class="model-item" onclick="selectModel('process_hr', 'ຂະບວນການ HR', this)">
+                <div class="model-text">
+                  <div class="model-title">🔄 ຂະບວນການ: HR</div>
+                  <div class="model-desc">ຂັ້ນຕອນການເຮັດວຽກຂອງພະແນກບຸກຄະລາກອນ</div>
+                </div>
+                <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
               </div>
-              <svg
-                class="check-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="3"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M20 6 9 17l-5-5" />
-              </svg>
+              <div class="model-item" onclick="selectModel('process_expense', 'ຂະບວນການ ບັນຊີ', this)">
+                <div class="model-text">
+                  <div class="model-title">🔄 ຂະບວນການ: ບັນຊີ</div>
+                  <div class="model-desc">ຂັ້ນຕອນການເບີກຈ່າຍ ແລະ ລົງບັນຊີ</div>
+                </div>
+                <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+              </div>
+              <div class="model-item" onclick="selectModel('process_loan_gov', 'ຂະບວນການ ສິນເຊື່ອລັດ', this)">
+                <div class="model-text">
+                  <div class="model-title">🔄 ຂະບວນການ: ສິນເຊື່ອລັດ</div>
+                  <div class="model-desc">ຂັ້ນຕອນການປ່ອຍສິນເຊື່ອລັດຖະກອນ</div>
+                </div>
+                <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+              </div>
+              <div class="model-item" onclick="selectModel('process_loan_sec', 'ຂະບວນການ ສິນເຊື່ອຫຼັກຊັບ', this)">
+                <div class="model-text">
+                  <div class="model-title">🔄 ຂະບວນການ: ສິນເຊື່ອຫຼັກຊັບ</div>
+                  <div class="model-desc">ຂັ້ນຕອນການປ່ອຍສິນເຊື່ອຫຼັກຊັບຄ້ຳປະກັນ</div>
+                </div>
+                <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+              </div>
+              <div class="model-item" onclick="selectModel('process_it', 'ຂະບວນການກ່ຽວກັບລະບົບ IT', this)">
+                <div class="model-text">
+                  <div class="model-title">🔄 ຂະບວນການ: ກ່ຽວກັບລະບົບ IT</div>
+                  <div class="model-desc">ຂັ້ນຕອນການການໃຊ້ງານລະບົບ IT</div>
+                </div>
+                <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+              </div>
+            </div>
+
+            <hr class="settings-divider" style="margin: 6px 0;">
+
+            <!-- 🌟 โหมดอื่นๆ (ให้อยู่ล่างสุดเสมอ จะแท็บไหนก็มองเห็น) -->
+            <div class="model-item" onclick="selectModel('other', 'ອື່ນໆ', this)">
+              <div class="model-text">
+                <div class="model-title">🌐 ອື່ນໆ (ນອກເໜືອລະບຽບ)</div>
+                <div class="model-desc">ສຳລັບຄຳຖາມທົ່ວໄປ, ຊ່ວຍຄິດ, ແປພາສາ</div>
+              </div>
+              <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
             </div>
           </div>
         </div>
@@ -593,6 +579,21 @@
           });
         }
       });
+      // Script สำหรับสลับแท็บ ระเบียบ / กระบวนการ
+      function switchModelTab(tabType) {
+        document.getElementById('tab-btn-reg').classList.remove('active');
+        document.getElementById('tab-btn-proc').classList.remove('active');
+        document.getElementById('tab-content-reg').style.display = 'none';
+        document.getElementById('tab-content-proc').style.display = 'none';
+
+        if (tabType === 'reg') {
+          document.getElementById('tab-btn-reg').classList.add('active');
+          document.getElementById('tab-content-reg').style.display = 'block';
+        } else {
+          document.getElementById('tab-btn-proc').classList.add('active');
+          document.getElementById('tab-content-proc').style.display = 'block';
+        }
+      }
     </script>
   </body>
 </html>

@@ -789,3 +789,34 @@ input:checked + .slider:before { transform: translateX(22px); }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+/* =========================================
+   🌟 CSS สำหรับแท็บสลับโหมด ระเบียบ/กระบวนการ
+   ========================================= */
+.model-popup-tabs {
+    display: flex;
+    background: #f0f4f8;
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 10px;
+}
+
+.model-tab {
+    flex: 1;
+    text-align: center;
+    border: none;
+    background: transparent;
+    padding: 8px;
+    font-family: 'Noto Sans Lao', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    color: #62818e;
+    border-radius: 10px;
+    transition: 0.2s ease;
+}
+
+.model-tab.active {
+    background: white;
+    color: var(--primary-color);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}

@@ -1,28 +1,179 @@
 var GEMINI_API_KEYS = [
-  "***"
+  "1111111111111111111111111"
 ];
 var GOOGLE_DOC_ID = "1cObuEeUbwHTpA05WoHQVymlDMVr-ZR0KVzLjSsWkvC0";
 var GOOGLE_TXT_ID = "1tx6FwdLdDi9Lzl-Ghk780X58XbGm7VLg00"; 
 var GOOGLE_SHEET_ID = "1Ipsf6-ryft-AhsyhUhGa3hT7dlDbH7rO2Eu_E8HJX1A";
 var IMAGE_FOLDER_ID = "1TxL2wcMH2oLK4l8eMxjbi6FUq-0oL_XH";
-var GEMINI_MODEL = "gemini-2.5-pro"; 
+var GEMINI_MODEL = "gemini-2.5-flash"; 
 var USER_SHEET_NAME = "Users"; 
 var LOG_SHEET_NAME = "Logs";   
 
 // ==========================================
 // 1. Main Function (Handle Web Requests)
 // ==========================================
-function doGet() {
-  return ContentService.createTextOutput(JSON.stringify({ status: "ok" }))
-      .setMimeType(ContentService.MimeType.JSON);
+// Code.gs
+// 🌟 ฟังก์ชันสำหรับเปิดหน้า Dashboard (เข้าผ่านลิงก์ /exec?page=dashboard)
+function doGet(e) {
+  var page = e.parameter.page || "index";
+  if (page === "dashboard") {
+    return HtmlService.createTemplateFromFile('logs').evaluate()
+      .setTitle('SINA | Adoption Dashboard')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
+  return HtmlService.createTemplateFromFile('index').evaluate()
+    .setTitle('SINA | AI Assistant')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
+// 📊 ฟังก์ชันดึงข้อมูลสรุป Adoption Rate (เวอร์ชันอัปเกรด มีตัวกรองเดือน)
+// 📊 ฟังก์ชันดึงข้อมูลสรุป Adoption Rate + Top Users
+function getAdoptionStats(targetMonth) {
+  var ss = SpreadsheetApp.openById(GOOGLE_SHEET_ID);
+  var logSheet = ss.getSheetByName(LOG_SHEET_NAME);
+  var userSheet = ss.getSheetByName(USER_SHEET_NAME);
+  
+  var logData = logSheet.getDataRange().getValues();
+  var totalUsersInSystem = userSheet.getLastRow() - 1; 
+  
+  var now = new Date();
+  var currentDefault = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy-MM");
+  var filterMonth = targetMonth || currentDefault;
+
+  var activeUsers = new Set();
+  var totalQuestions = 0;
+  var totalTokens = 0;
+  var dailyActivity = {}; 
+  var availableMonths = new Set(); 
+  
+  // 🌟 ตัวแปรใหม่: เก็บจำนวนคำถามของพนักงานแต่ละคน
+  var userQuestionCounts = {}; 
+
+  for (var i = 1; i < logData.length; i++) {
+    if (!logData[i][0]) continue; 
+
+    var logDate = new Date(logData[i][0]);
+    var monthKey = Utilities.formatDate(logDate, Session.getScriptTimeZone(), "yyyy-MM");
+    availableMonths.add(monthKey); 
+
+    if (monthKey === filterMonth) {
+      var userId = logData[i][1];
+      var userName = logData[i][2]; // ชื่อพนักงาน
+      var status = logData[i][5] ? logData[i][5].toString().trim() : "";
+      var tokens = parseInt(logData[i][8]) || 0;
+
+      if (status === "Success" || status === "QuickReply" || status === "System") {
+        activeUsers.add(userId);
+        
+        if (status !== "System") {
+          totalQuestions++;
+          totalTokens += tokens;
+          
+          // 🌟 นับคะแนน: บวก 1 คำถาม ให้พนักงานคนนี้
+          userQuestionCounts[userName] = (userQuestionCounts[userName] || 0) + 1;
+        }
+        
+        var dateStr = Utilities.formatDate(logDate, Session.getScriptTimeZone(), "dd/MM");
+        dailyActivity[dateStr] = (dailyActivity[dateStr] || 0) + 1;
+      }
+    }
+  }
+
+  // 🌟 จัดอันดับ Top 5 พนักงานที่ถามบ่อยที่สุด
+  var sortedTopUsers = Object.keys(userQuestionCounts).map(function(name) {
+    return { name: name, count: userQuestionCounts[name] };
+  }).sort(function(a, b) {
+    return b.count - a.count; // เรียงจากมากไปน้อย
+  }).slice(0, 5); // ดึงมาแค่ 5 อันดับแรก
+// (โค้ดเดิมด้านบน ...)
+  var sortedTopUsers = Object.keys(userQuestionCounts).map(function(name) {
+    return { name: name, count: userQuestionCounts[name] };
+  }).sort(function(a, b) {
+    return b.count - a.count; 
+  }).slice(0, 5); 
+
+  // 🌟 ເພີ່ມສູດຄິດໄລ່ຄ່າໃຊ້ຈ່າຍ (Estimated Cost)
+  // ສົມມຸດລາຄາສະເລ່ຍ Gemini Flash ຢູ່ທີ່ປະມານ $0.15 ຕໍ່ 1 ລ້ານ Token
+  var costPerMillionTokens = 0.15; // ປ່ຽນຕົວເລກນີ້ໄດ້ຕາມລາຄາຈິງໃນໜ້າ Billing
+  var estimatedCostUsd = (totalTokens / 1000000) * costPerMillionTokens;
+
+  return {
+    selectedMonth: filterMonth,
+    availableMonths: Array.from(availableMonths).sort().reverse(), 
+    totalUsers: totalUsersInSystem,
+    activeUsers: activeUsers.size,
+    adoptionRate: totalUsersInSystem > 0 ? ((activeUsers.size / totalUsersInSystem) * 100).toFixed(2) : 0,
+    totalQuestions: totalQuestions,
+    totalTokens: totalTokens,
+    estimatedCost: estimatedCostUsd.toFixed(4), // 🌟 ສົ່ງຄ່າເງິນໄປໜ້າເວັບ (ເອົາທົດສະນິຍົມ 4 ຕຳແໜ່ງ)
+    dailyLabels: Object.keys(dailyActivity),
+    dailyValues: Object.values(dailyActivity),
+    topUsers: sortedTopUsers
+  };
+
+}
+// 📋 ฟังก์ชันดึงประวัติกิจกรรมตาราง (รองรับการค้นหา, แบ่งหน้า, และกรองตามเดือน)
+function getDashboardLogs(targetMonth, searchTerm, offset, limit) {
+  try {
+    var ss = SpreadsheetApp.openById(GOOGLE_SHEET_ID);
+    var logSheet = ss.getSheetByName(LOG_SHEET_NAME);
+    var data = logSheet.getDataRange().getValues();
+    
+    var now = new Date();
+    var filterMonth = targetMonth || Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy-MM");
+    var searchLower = searchTerm ? searchTerm.toLowerCase().trim() : "";
+    var start = offset || 0;
+    var fetchLimit = limit || 20; // ดึงทีละ 20 รายการ
+    
+    var filteredLogs = [];
+    
+    // วนลูปจากล่างขึ้นบน (แถวใหม่สุดขึ้นก่อน)
+    for (var i = data.length - 1; i >= 1; i--) {
+      if (!data[i][0]) continue; // ข้ามบรรทัดว่าง
+      
+      var logDate = new Date(data[i][0]);
+      var monthKey = Utilities.formatDate(logDate, Session.getScriptTimeZone(), "yyyy-MM");
+      
+      // กรองเฉพาะเดือนที่เลือกใน Dropdown ด้านบน
+      if (monthKey === filterMonth) {
+         var userName = (data[i][2] || "").toString().toLowerCase();
+         var question = (data[i][3] || "").toString().toLowerCase();
+         
+         // ถ้ามีคำค้นหา ให้เช็คว่าตรงกับชื่อพนักงาน หรือ คำถามไหม
+         if (searchLower === "" || userName.includes(searchLower) || question.includes(searchLower)) {
+             filteredLogs.push({
+                 time: Utilities.formatDate(logDate, Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm"),
+                 user: data[i][2],
+                 question: data[i][3],
+                 status: data[i][5],
+                 tokens: data[i][8] || 0
+             });
+         }
+      }
+    }
+    
+    // ตัดแบ่งหน้า (Pagination)
+    var chunk = filteredLogs.slice(start, start + fetchLimit);
+    var hasMore = (start + fetchLimit) < filteredLogs.length;
+    
+    return { logs: chunk, hasMore: hasMore };
+  } catch (e) {
+    return { logs: [], hasMore: false, error: e.toString() };
+  }
+}
+// 📋 ฟังก์ชันดึง Log 50 รายการล่าสุด
+function getRecentLogs() {
+  var sheet = SpreadsheetApp.openById(GOOGLE_SHEET_ID).getSheetByName(LOG_SHEET_NAME);
+  var data = getRecentLogRows(sheet, 50, 9); // ดึง 50 แถวล่าสุด
+  return data.slice(1).reverse(); // กลับด้านให้รายการใหม่สุดอยู่บน
+}
 function doPost(e) {
   try {
     var requestData = JSON.parse(e.postData.contents);
     var action = requestData.action; 
 
     if (action === "login") return handleLogin(requestData.username, requestData.password);
+    if (action === "changePassword") return handleChangePassword(requestData.userId, requestData.oldPassword, requestData.newPassword);
     // 🌟 เปลี่ยน getHistory ให้รองรับ Session ID
     if (action === "getHistory") return getChatHistory(requestData.userId, requestData.offset, requestData.limit, requestData.sessionId); 
     // 🌟 เพิ่มระบบดึงรายชื่อห้องแชททั้งหมด
@@ -37,7 +188,7 @@ function doPost(e) {
     }
     if (action === "getThreads") return getChatThreads(requestData.userId);
 
-    if (action === "transcribe") return handleAudioTranscription(requestData.base64Audio, requestData.mimeType, requestData.language);
+    if (action === "transcribe") return handleAudioTranscription(requestData.base64Audio, requestData.mimeType);
 
     if (action === "chat") {
       var userMessage = requestData.message;
@@ -95,16 +246,15 @@ function doPost(e) {
       var fullKnowledgeContext = getKnowledgeByCategory(selectedCategory);
       if (!fullKnowledgeContext) return createJsonResponse({ error: "ຂໍອະໄພ, ບໍ່ພົບຂໍ້ມູນລະບຽບໃນໝວດໝູ່ນີ້" });
 
-      // 🌟 2. ໃຊ້ລະບົບ RAG ກອງສະເພາະຍ່ອຫົວທີ່ກ່ຽວຂ້ອງ
-      var knowledgeContext = extractRelevantContext(fullKnowledgeContext, userMessage);
-      if (!knowledgeContext) {
-          knowledgeContext = fullKnowledgeContext.substring(0, 3500);
-      }
+      // 🌟 2. ຍົກເລີກການຫັ່ນເອກະສານ (RAG) ໃຫ້ສົ່ງທັງໝົດໃຫ້ Gemini ອ່ານເລີຍ!
+      // ເນື່ອງຈາກ Gemini 2.5 ມີຄວາມສາມາດອ່ານເອກະສານ 50 ໜ້າໄດ້ສະບາຍ ແລະ ປ້ອງກັນບັນຫາການພິມຄຳສັບຕິດກັນ
+      var knowledgeContext = fullKnowledgeContext;
 
       var historyContext = buildHistoryTextFromClient(clientHistory);
       if (!historyContext) historyContext = getRecentHistoryText(userId, sessionId);
 
-      var systemPrompt = `You are an AI assistant for SSMI named "SINA". You are speaking with: ${userName}.
+      
+var systemPrompt = `You are an AI assistant for SSMI named "SINA". You are speaking with: ${userName}.
 Currently, the user has selected to speak with the: **${currentAiName}** department.
 
 Your strict rules:
@@ -120,7 +270,10 @@ Example response format: "ຄຳຖາມນີ້ເບິ່ງຄືວ່າ
 --- AUDITOR & MULTIMODAL RULES ---
 5. If the user uploads multiple documents, cross-check values across them and compare with the regulations in your context.
 6. 🌟 CRITICAL RULE FOR QUOTATIONS (ໃບສະເໜີລາຄາ): If the uploaded documents are Quotations for price comparison, it is NORMAL for them to have DIFFERENT dates and DIFFERENT total amounts. DO NOT flag different amounts or dates as an error. Your job is only to verify that they are quoting for the SAME items/services, and check if the minimum required number of quotations is met according to the rules.
-7. Summarize findings concisely using bullet points. Point out any real discrepancies, and state whether it is approved/correct.`;
+7. Summarize findings concisely using bullet points. Point out any real discrepancies, and state whether it is approved/correct.
+
+--- 🌟 RULE FOR CITATIONS (ອ້າງອີງ) 🌟 ---
+8. 🌟 CRITICAL: ທຸກຄັ້ງທີ່ຕອບຄຳຖາມກ່ຽວກັບລະບຽບການ, ເຈົ້າຕ້ອງບອກເລກທີ "ມາດຕາ", "ຂໍ້", ຫຼື "ໝວດ" ທີ່ອ້າງອີງສະເໝີ (ຖ້າມີໃນຂໍ້ມູນ). ຕົວຢ່າງ: "ອີງຕາມມາດຕາ X, ຂໍ້ Y ໄດ້ລະບຸໄວ້ວ່າ..."`;
 
       var finalPrompt = "Context ຂໍ້ມູນລະບຽບການ: \n" + knowledgeContext + "\n\n";
       if (historyContext !== "") finalPrompt += historyContext;
@@ -160,9 +313,20 @@ Example response format: "ຄຳຖາມນີ້ເບິ່ງຄືວ່າ
       };
 
       var activeApiKey = GEMINI_API_KEYS[0];
-      var url = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent?key=" + activeApiKey;
-      var response = UrlFetchApp.fetch(url, options);
+      
+      // 🌟 1. ทัพหน้า: ลองใช้โมเดล Flash ก่อน (เร็วกว่า โควต้าเยอะกว่า)
+      var urlFlash = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + activeApiKey;
+      var response = UrlFetchApp.fetch(urlFlash, options);
       var responseData = JSON.parse(response.getContentText());
+
+      // 🌟 2. เช็คสถานะ: ถ้า Flash ติด Error (เช่น 503 Overloaded, 429 Quota) หรือตอบไม่ได้
+      if (responseData.error || !responseData.candidates || responseData.candidates.length === 0) {
+          
+          // 🌟 3. ทัพหลวง: สลับไปใช้โมเดล Pro ทันที แบบไร้รอยต่อ!
+          var urlPro = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=" + activeApiKey;
+          response = UrlFetchApp.fetch(urlPro, options);
+          responseData = JSON.parse(response.getContentText());
+      }
 
       var aiReply = null;
       var lastError = "";
@@ -170,6 +334,9 @@ Example response format: "ຄຳຖາມນີ້ເບິ່ງຄືວ່າ
 
       if (responseData.candidates && responseData.candidates.length > 0) {
         aiReply = responseData.candidates[0].content.parts[0].text;
+        
+        // ❌ เอาการต่อท้ายคำเตือนตรงนี้ออก (ไม่ต้องต่อท้ายก่อนเซฟลง Sheet) ❌
+        
         if (responseData.usageMetadata && responseData.usageMetadata.totalTokenCount) {
             usedTokens = responseData.usageMetadata.totalTokenCount;
         }
@@ -180,8 +347,16 @@ Example response format: "ຄຳຖາມນີ້ເບິ່ງຄືວ່າ
       var logFileUrls = savedFileUrls.length > 0 ? savedFileUrls.join(" \n ") : "";
 
       if (aiReply) {
-        logToSheet(userId, userName, userMessage, aiReply, "Success", logFileUrls, sessionId, usedTokens); 
-        return createJsonResponse({ reply: aiReply });
+        // 🌟 1. ดักลบคำเตือนทิ้งก่อน (ป้องกันกรณี AI แอบจำประวัติเก่ามาพิมพ์เอง)
+        var cleanReply = aiReply.replace(/\n*---\n*⚠️ \*ໝາຍເຫດ: SINA ເປັນ AI ອາດເຮັດຜິດພາດໄດ້ ໃຫ້ໄປກວດສອບລະບຽບຄືນກ່ອນນຳຂໍ້ມູນໄປໃຊ້ງານຈິງ\*/g, "").trim();
+
+        // 🌟 2. บันทึกคำตอบ "แบบไม่มีคำเตือน" ลงใน Sheet (ประวัติใน Sheet จะได้สะอาด)
+        logToSheet(userId, userName, userMessage, cleanReply, "Success", logFileUrls, sessionId, usedTokens); 
+
+        // 🌟 3. ค่อยเอาคำเตือนมาแปะรวม เฉพาะตอนส่งกลับไปโชว์ที่หน้าจอเว็บเท่านั้น
+        var displayReply = cleanReply + "\n\n---\n⚠️ *ໝາຍເຫດ: SINA ເປັນ AI ອາດເຮັດຜິດພາດໄດ້ ໃຫ້ໄປກວດສອບລະບຽບຄືນກ່ອນນຳຂໍ້ມູນໄປໃຊ້ງານຈິງ*";
+
+        return createJsonResponse({ reply: displayReply });
       } else {
         logToSheet(userId, userName, userMessage, lastError, "Error", logFileUrls, sessionId, 0);
         return createJsonResponse({ error: "AI ບໍ່ສາມາດສ້າງຄຳຕອບໄດ້: " + lastError.substring(0, 50) });
@@ -212,15 +387,19 @@ function getChatHistory(userId, offset, limit, targetSessionId) {
     var sheet = SpreadsheetApp.openById(GOOGLE_SHEET_ID).getSheetByName(LOG_SHEET_NAME);
     if (!sheet) return createJsonResponse({ history: [], hasMore: false });
     
-    var data = getRecentLogRows(sheet, 2000, 8); // ดึงมา 8 คอลัมน์
+    var data = getRecentLogRows(sheet, 2000, 8); 
     var allUserHistory = [];
     
     for (var i = data.length - 1; i >= 1; i--) {
-      // 🌟 เช็คว่าตรงกับผู้ใช้ และ ตรงกับห้องแชทไหม!
       var rowSessionId = data[i][7] ? data[i][7].toString() : "MAIN_SESSION";
+      var qText = data[i][3].toString();
+      
+      // 🌟 เพิ่มบรรทัดนี้: ถ้าเป็นข้อความระบบ ให้ข้ามไปเลย ไม่เอามาโชว์
+      if (qText.includes("[SYSTEM_EVENT]")) continue;
+
       if (data[i][1].toString() === userId && rowSessionId === currentSession) {
         allUserHistory.push({ 
-          question: data[i][3], 
+          question: qText, 
           answer: data[i][4], 
           imageUrl: data[i][6] && data[i][6].toString().startsWith("http") ? data[i][6].toString() : "" 
         });
@@ -245,15 +424,19 @@ function getRecentHistoryText(userId, targetSessionId) {
 
     for (var i = data.length - 1; i >= 1; i--) {
       var rowSessionId = data[i][7] ? data[i][7].toString() : "MAIN_SESSION";
+      var qText = data[i][3].toString();
+      
+      // 🌟 เพิ่มบรรทัดนี้: ซ่อนจากสายตา AI ด้วย
+      if (qText.includes("[SYSTEM_EVENT]")) continue;
+
       if (data[i][1].toString() === userId && rowSessionId === currentSession && !data[i][4].toString().includes("API Error")) {
-        tempHistory.unshift("ພະນັກງານ: " + data[i][3] + "\nAI: " + data[i][4]);
+        tempHistory.unshift("ພະນັກງານ: " + qText + "\nAI: " + data[i][4]);
         if (tempHistory.length >= 4) break; 
       }
     }
     return tempHistory.length > 0 ? "--- ປະຫວັດການສົນທະນາຫຼ້າສຸດ ---\n" + tempHistory.join("\n\n") + "\n\n" : "";
   } catch (e) { return ""; }
 }
-
 // 🌟 ระบบสร้างรายชื่อเมนูแถบด้านข้าง (ดึงเฉพาะประวัติล่าสุดของแต่ละห้องมาตั้งชื่อ)
 function getChatThreads(userId) {
   try {
@@ -264,20 +447,21 @@ function getChatThreads(userId) {
     var threadsMap = {};
     var threadsList = [];
 
-    // วนจากล่างขึ้นบน เพื่อให้ได้แชทล่าสุดก่อน
     for (var i = data.length - 1; i >= 1; i--) {
       if (data[i][1].toString() === userId) {
+        var qText = data[i][3].toString();
+        
+        // 🌟 เพิ่มบรรทัดนี้: ห้ามเอาคำว่า SYSTEM_EVENT มาตั้งชื่อห้องแชท
+        if (qText.includes("[SYSTEM_EVENT]")) continue;
+
         var sid = data[i][7] ? data[i][7].toString() : "MAIN_SESSION";
         if (!threadsMap[sid]) {
-          var questionText = data[i][3].toString();
-          // เอาคำถามแรกมาตั้งชื่อห้องแชท (ตัดให้เหลือ 30 ตัวอักษร)
-          var title = questionText.length > 30 ? questionText.substring(0, 30) + "..." : questionText;
-          
+          var title = qText.length > 30 ? qText.substring(0, 30) + "..." : qText;
           threadsMap[sid] = true;
           threadsList.push({
             sessionId: sid,
             title: title,
-            date: data[i][0] // เก็บวันที่เพื่อเรียงลำดับ
+            date: data[i][0]
           });
         }
       }
@@ -287,47 +471,61 @@ function getChatThreads(userId) {
 }
 
 // ==========================================
-// 3. ระบบอ่านเอกสาร แยกตามแผนก (โค้ดเดิม)
+// 3. ระบบอ่านเอกสาร แยกไฟล์ Google Docs ตามแผนก (แบบใหม่)
+// ==========================================
+// ==========================================
+// 3. ระบบอ่านเอกสาร แยกไฟล์ Google Docs ตามแผนก (รองรับอ่านหลายไฟล์พร้อมกัน)
 // ==========================================
 function getKnowledgeByCategory(category) {
   var cache = CacheService.getScriptCache();
-  var cacheKey = "DOC_TAB_" + category;
+  var cacheKey = "DOC_FILE_MULTI_" + category;
   var cachedData = cache.get(cacheKey);
   if (cachedData) return cachedData; 
 
   try {
-    var tabMapping = {
-      "hr": "ລະບຽບວ່າດ້ວຍພະນັກງານ ແລະ ການບໍລິຫານບຸກຄະລາກອນ",
-      "expense": "ລະບຽບວ່າດ້ວຍການຄຸ້ມຄອງລາຍຈ່າຍ ແລະ ການລົງບັນຊີ",
-      "loan_gov": "ລະບຽບວ່າດ້ວຍສິນເຊື່ອ ລັດຖະກອນ",
-      "loan_sec": "ລະບຽບວ່າດ້ວຍສິນເຊື່ອ ຫຼັກຊັບຄ້ຳປະກັນ",
-      "deposit": "ລະບຽບວ່າດ້ວຍເງິນຝາກ"
+    // 🌟 ใส่ ID แบบครอบด้วย [ ] เพื่อให้ใส่ได้หลายไฟล์ (คั่นด้วยลูกน้ำ)
+    var docMapping = {
+      "hr": [
+          "1XNF8eh4JHVYIrO0RwvzpXfZ5WxjWmwUX4wSSh0R1iQs",
+          "1SCkIg856AIJaN4TawdnyrljECI64u62hdj0AU9PcWnA" // มีไฟล์เดียวก็ใส่ในวงเล็บเหลี่ยม
+      ], 
+      "expense": [
+          "1IK52pFGVvPzxeCQI-oFTWtOq2Ow4YetREmoazQdagoQ"
+      ],
+      "loan_gov": [
+          "1Vv66GTmGB1-jZJodwh6xSLwjQkBeBJAmVibw5TlSEy8"
+      ],
+      "loan_sec": [
+          "1tsUFdW4If0nb4FPPuSVi3XvXGUHiUG12jYwacsJ6qn8",
+          "130htdNbFPiMdszA9Thg_Z_-XIACGdoCBHk-HMLZRDPc",
+          "1OgWz_fEBkr6yVAn_mP0F8YEVALzwIucZQhmX0FTqldw"
+      ],
+      "deposit": [
+          "1ESnXlGbJTGH-rjLzjcEUsSNd9vA9PGajrKQLSQCGM5k" // 🌟 จะ 3 ไฟล์ หรือ 4 ไฟล์ก็ใส่ต่อกันมาได้เลยครับ
+      ]
     };
 
-    var targetTabTitle = tabMapping[category] || tabMapping["hr"];
-    var doc = DocumentApp.openById(GOOGLE_DOC_ID);
-    var allTabs = doc.getTabs(); 
-    var extractedText = "";
-
-    function findAndExtractTab(tabs) {
-      for (var i = 0; i < tabs.length; i++) {
-        var tab = tabs[i];
-        if (tab.getTitle().trim() === targetTabTitle.trim()) {
-           try { extractedText = "--- [ໝວດໝູ່: " + tab.getTitle() + "] ---\n" + tab.asDocumentTab().getBody().getText() + "\n\n"; } catch (err) {}
-           return true; 
+    var targetDocIds = docMapping[category] || docMapping["hr"];
+    var extractedText = "--- [ຂໍ້ມູນລະບຽບການ] ---\n\n";
+    
+    // 🌟 วนลูปอ่านข้อมูลทุกไฟล์ที่ระบุไว้ในหมวดนั้นๆ มาต่อกัน
+    for (var i = 0; i < targetDocIds.length; i++) {
+        try {
+            var doc = DocumentApp.openById(targetDocIds[i].trim());
+            extractedText += "📄 [ເອກະສານອ້າງອີງພາກທີ " + (i+1) + "]:\n" + doc.getBody().getText() + "\n\n";
+        } catch (docErr) {
+            console.log("ບໍ່ສາມາດອ່ານໄຟລ໌ ID: " + targetDocIds[i]);
         }
-        var childTabs = tab.getChildTabs();
-        if (childTabs && childTabs.length > 0) {
-           if (findAndExtractTab(childTabs)) return true;
-        }
-      }
-      return false;
     }
 
-    findAndExtractTab(allTabs); 
-    if (extractedText !== "") { try { cache.put(cacheKey, extractedText, 3600); } catch(e) {} }
+    if (extractedText !== "--- [ຂໍ້ມູນລະບຽບການ] ---\n\n") { 
+        try { cache.put(cacheKey, extractedText, 3600); } catch(e) {} 
+    }
     return extractedText;
-  } catch (e) { return "Error reading document: " + e.toString(); }
+
+  } catch (e) { 
+    return "Error reading document: " + e.toString() + "\n(ກະລຸນາກວດສອບວ່າ ID ຂອງ Google Docs ຖືກຕ້ອງຫຼືບໍ່ ແລະ ໄດ້ແຊຣ໌ສິດເປັນ Anyone with the link ແລ້ວຫຼືຍັງ)"; 
+  }
 }
 
 // ==========================================
@@ -349,16 +547,15 @@ function saveFileToDrive(base64, mimeType, userId, index) {
 // ==========================================
 // ✅ Audio Transcription (iOS Mic Fallback)
 // ==========================================
-function handleAudioTranscription(base64Audio, mimeType, language) {
+function handleAudioTranscription(base64Audio, mimeType) {
   try {
-    var requestedLanguage = language || "lo-LA";
     var activeApiKey = GEMINI_API_KEYS[0];
     var url = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent?key=" + activeApiKey;
     var payload = {
       "contents": [{
         "role": "user",
         "parts": [
-          { "text": "Transcribe this audio exactly as spoken. The target language is Lao (lo-LA). Keep the result in Lao script only, do not translate to English, and do not add commentary, quotation marks, or formatting. If speech is unclear, still return best-effort Lao transcription. Requested language: " + requestedLanguage },
+          { "text": "Transcribe this audio exactly as spoken. Output only the transcribed text with no extra commentary, no quotation marks, and no formatting." },
           { "inlineData": { "mimeType": mimeType, "data": base64Audio } }
         ]
       }],
@@ -374,13 +571,6 @@ function handleAudioTranscription(base64Audio, mimeType, language) {
     var responseData = JSON.parse(response.getContentText());
     if (responseData.candidates && responseData.candidates[0] && responseData.candidates[0].content) {
       var transcript = responseData.candidates[0].content.parts[0].text.trim();
-
-      // If model returns Thai script for Lao speech, convert to Lao script before sending back.
-      if (containsThaiScript(transcript) && !containsLaoScript(transcript)) {
-        var converted = convertThaiLikeTextToLaoScript(transcript, activeApiKey);
-        if (converted) transcript = converted;
-      }
-
       return createJsonResponse({ transcript: transcript });
     }
     return createJsonResponse({ error: "ຖອດສຽງບໍ່ສຳເລັດ" });
@@ -389,53 +579,22 @@ function handleAudioTranscription(base64Audio, mimeType, language) {
   }
 }
 
-function containsThaiScript(text) {
-  return /[\u0E00-\u0E7F]/.test(text || "");
-}
-
-function containsLaoScript(text) {
-  return /[\u0E80-\u0EFF]/.test(text || "");
-}
-
-function convertThaiLikeTextToLaoScript(inputText, apiKey) {
-  try {
-    var url = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent?key=" + apiKey;
-    var payload = {
-      "contents": [{
-        "role": "user",
-        "parts": [{
-          "text": "Convert the following Thai-script text into Lao script only. Keep meaning and wording as close as possible. Output only Lao script text with no explanation:\n" + inputText
-        }]
-      }],
-      "generationConfig": { "temperature": 0, "maxOutputTokens": 1000 }
-    };
-
-    var response = UrlFetchApp.fetch(url, {
-      "method": "post",
-      "contentType": "application/json",
-      "payload": JSON.stringify(payload),
-      "muteHttpExceptions": true
-    });
-
-    var data = JSON.parse(response.getContentText());
-    if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
-      var out = (data.candidates[0].content.parts[0].text || "").trim();
-      if (containsLaoScript(out)) return out;
-    }
-    return "";
-  } catch (e) {
-    return "";
-  }
-}
-
 function handleLogin(username, password) {
   try {
     var sheet = SpreadsheetApp.openById(GOOGLE_SHEET_ID).getSheetByName(USER_SHEET_NAME);
     if (!sheet) return createJsonResponse({ success: false, message: "ບໍ່ພົບ Tab 'Users'" });
     var data = sheet.getDataRange().getValues();
+    
     for (var i = 1; i < data.length; i++) { 
       if (data[i][0].toString() === username && data[i][1].toString() === password) {
-        return createJsonResponse({ success: true, userId: data[i][0], userName: data[i][2] });
+        var userId = data[i][0];
+        var userName = data[i][2];
+        
+        // 🌟 ບຳທຶກ Log ການເຂົ້າສູ່ລະບົບ (ແຍກຈາກການຖາມປົກກະຕິ)
+        var sessionId = "LOGIN_" + new Date().getTime();
+        logToSheet(userId, userName, "[SYSTEM_EVENT]", "ເຂົ້າສູ່ລະບົບສຳເລັດ (Login)", "System", "", sessionId, 0);
+
+        return createJsonResponse({ success: true, userId: userId, userName: userName });
       }
     }
     return createJsonResponse({ success: false, message: "ລະຫັດພະນັກງານ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ" });
@@ -518,37 +677,127 @@ function checkUserQuotaLogic(userId) {
   }
   return { isLimited: false, history: askHistory, cache: rateLimitCache, limitKey: limitKey };
 }
-
 // ==========================================
-// 🌟 ຟັງຊັນ RAG ຄົ້ນຫາສະເພາະຍ່ອຫົວທີ່ກ່ຽວຂ້ອງ
+// 🌟 ຟັງຊັນ RAG ຄົ້ນຫາສະເພາະຍ່ອຫົວທີ່ກ່ຽວຂ້ອງ (ອັບເກຣດ 3.0 ແກ້ບັນຫາມົ້ວ)
 // ==========================================
 function extractRelevantContext(fullText, userMessage) {
   if (!fullText) return null;
 
-  var questionWords = ["ແນວໃດ", "ແມ່ນຫຍັງ", "ເທົ່າໃດ", "ຈັກມື້", "ໄດ້ບໍ່", "ອະທິບາຍ", "ກ່ຽວກັບ", "ຊ່ວຍ", "ບອກ", "ຂໍຖາມ", "ພີ່ຄຮັບ", "ຊ່ວຍແດ່"];
-  var searchWord = userMessage.toLowerCase();
-  for (var i = 0; i < questionWords.length; i++) {
-     searchWord = searchWord.replace(new RegExp(questionWords[i], "g"), "");
-  }
-  searchWord = searchWord.trim();
+  var lowMsg = userMessage.toLowerCase();
 
-  if (searchWord.length < 2) return fullText.substring(0, 3000);
+  // 🌟 1. ดักคำถามกว้างๆ (Broad Questions)
+  // ຖ້າພະນັກງານຖາມກວ້າງໆ ໃຫ້ດຶງ 4500 ຕົວອັກສອນທຳອິດ (ມັກຈະເປັນສາລະບານ/ບົດນຳ) ສົ່ງໄປໃຫ້ AI ເລີຍ
+  if (/ສະຫຼຸບ|ມີຂໍ້ມູນຫຍັງແດ່|ມີຫຍັງແດ່|ທັງໝົດ|ລວມ|ມີລະບຽບຫຍັງ|ລາຍລະອຽດຫຍັງ/i.test(lowMsg)) {
+      return "--- (ນີ້ຄືພາກສະຫຼຸບ/ສາລະບານຂອງເອກະສານ) ---\n\n" + fullText.substring(0, 4500);
+  }
+
+  // 2. ຄຳສັບທົ່ວໄປທີ່ຄວນຕັດຖິ້ມ (Stop words) เพิ่มคำว่า เจ๊า, ข้อย, ข้อมูล ลงไปเพื่อกันมันเอาไปค้นหา
+  var questionWords = ["ເຈົ້າ", "ຂ້ອຍ", "ຂໍ້ມູນ", "ລາຍລະອຽດ", "ແນວໃດ", "ແມ່ນຫຍັງ", "ເທົ່າໃດ", "ຈັກມື້", "ໄດ້ບໍ່", "ອະທິບາຍ", "ກ່ຽວກັບ", "ຊ່ວຍ", "ບອກ", "ຂໍຖາມ", "ຊ່ວຍແດ່", "ຕ້ອງ", "ເຮັດ", "ມີ", "ໃດແດ່", "ຢາກ", "ການ", "ຂອງ", "ໃນ", "ແລະ", "ໃຫ້", "ຄື", "ດັ່ງນີ້", "ອື່ນໆ"];
+  
+  var searchWord = lowMsg;
+  for (var i = 0; i < questionWords.length; i++) {
+     searchWord = searchWord.replace(new RegExp(questionWords[i], "g"), " ");
+  }
+  
+  var keywords = searchWord.split(/\s+/).filter(function(kw) { return kw.length > 2; });
+
+  if (keywords.length === 0) return fullText.substring(0, 4000);
 
   var paragraphs = fullText.split(/\n/);
   var matchedChunks = [];
 
   for (var j = 0; j < paragraphs.length; j++) {
      var p = paragraphs[j].trim();
-     if (p.length < 15) continue;
+     var pLower = p.toLowerCase();
+     if (p.length < 15) continue; 
 
-     if (p.toLowerCase().includes(searchWord)) {
+     var matchCount = 0;
+     for (var k = 0; k < keywords.length; k++) {
+         if (pLower.includes(keywords[k])) {
+             matchCount++;
+         }
+     }
+
+     if (matchCount > 0) {
          var prev = (j > 0) ? paragraphs[j-1].trim() : "";
          var next = (j < paragraphs.length - 1) ? paragraphs[j+1].trim() : "";
-         matchedChunks.push(prev + "\n" + p + "\n" + next);
+         matchedChunks.push({
+             score: matchCount,
+             text: prev + "\n" + p + "\n" + next
+         });
      }
   }
 
   if (matchedChunks.length === 0) return null;
 
-  return matchedChunks.slice(0, 4).join("\n\n--- (ຂ້າມເນື້ອຫາບາງສ່ວນ) ---\n\n");
+  matchedChunks.sort(function(a, b) { return b.score - a.score; });
+
+  var topChunks = [];
+  for(var m = 0; m < Math.min(4, matchedChunks.length); m++){
+     topChunks.push(matchedChunks[m].text);
+  }
+
+  return topChunks.join("\n\n--- (ຂ້າມເນື້ອຫາບາງສ່ວນ) ---\n\n");
+}
+// ==========================================
+// 🌟 ຟັງຊັນປ່ຽນລະຫັດຜ່ານ
+// ==========================================
+function handleChangePassword(userId, oldPassword, newPassword) {
+  try {
+    var sheet = SpreadsheetApp.openById(GOOGLE_SHEET_ID).getSheetByName(USER_SHEET_NAME);
+    if (!sheet) return createJsonResponse({ success: false, message: "ບໍ່ພົບ Tab 'Users'" });
+    
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) { 
+      // หา ID ให้ตรงกัน
+      if (data[i][0].toString() === userId) {
+        // ตรวจสอบว่ารหัสเก่าตรงไหม
+        if (data[i][1].toString() === oldPassword) {
+          // ถ้าตรง ให้อัปเดตรหัสใหม่ในคอลัมน์ที่ 2 (Column B)
+          sheet.getRange(i + 1, 2).setValue(newPassword);
+          return createJsonResponse({ success: true, message: "ປ່ຽນລະຫັດຜ່ານສຳເລັດແລ້ວ" });
+        } else {
+          return createJsonResponse({ success: false, message: "ລະຫັດຜ່ານເກົ່າບໍ່ຖືກຕ້ອງ" });
+        }
+      }
+    }
+    return createJsonResponse({ success: false, message: "ບໍ່ພົບຜູ້ໃຊ້ງານໃນລະບົບ" });
+  } catch (e) {
+    return createJsonResponse({ success: false, message: "Error: " + e.toString() });
+  }
+}
+// ==========================================
+// 🌟 ระบบ Guide Line สอนใช้งาน (Intro.js)
+// ==========================================
+function startGuideTour() {
+    // เช็คว่าเคยดูไกด์ไปแล้วหรือยัง
+    const hasSeenGuide = localStorage.getItem('ssmi_has_seen_guide');
+    
+    if (!hasSeenGuide) {
+        // หน่วงเวลา 1 วินาทีรอให้หน้าเว็บโหลดสมบูรณ์ก่อน
+        setTimeout(() => {
+            introJs().setOptions({
+                nextLabel: 'ຕໍ່ໄປ ➔',
+                prevLabel: '⬅ ກັບຄືນ',
+                doneLabel: '✅ ເຂົ້າໃຈແລ້ວ',
+                showStepNumbers: true,
+                showBullets: true,
+                exitOnOverlayClick: false, // บังคับให้ผู้ใช้กดปุ่มเท่านั้น ห้ามกดทะลุ
+                exitOnEsc: false
+            }).oncomplete(function() {
+                // เมื่อกด "เข้าใจแล้ว" จะบันทึกไว้ คราวหน้าจะได้ไม่เด้งอีก
+                localStorage.setItem('ssmi_has_seen_guide', 'true');
+            }).onexit(function() {
+                // เผื่อกรณีกดออกกลางคัน
+                localStorage.setItem('ssmi_has_seen_guide', 'true');
+            }).start();
+        }, 1000);
+    }
+}
+
+// ฟังก์ชันเรียกดูไกด์ซ้ำ (กรณีอยากดูใหม่)
+function forceStartGuide() {
+    if (typeof closeSettingsModal === "function") closeSettingsModal();
+    localStorage.removeItem('ssmi_has_seen_guide');
+    startGuideTour();
 }
