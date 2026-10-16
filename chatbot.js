@@ -292,6 +292,9 @@ async function sendMessage() {
     const text = userInput.value.trim();
     if (!text && currentFiles.length === 0) return;
 
+    // 👇 เติมบรรทัดนี้ลงไป เพื่อปลดล็อกเสียงทันทีที่กดส่งข้อความ 👇
+    unlockAudio();
+
     let userDisplayHtml = text;
     if (currentFiles.length > 0) {
         let filesHtml = '<div style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 5px;">';
@@ -726,55 +729,42 @@ async function toggleMic() {
 }
 
 // ==========================================
-// 🌟 ລະບົບສຽງອ່ານພາສາລາວ (Google Translate TTS)
+// 🌟 ລະບົບສຽງອ່ານພາສາລາວ (ອັບເກຣດ: ປ້ອງກັນ Browser ບລັອກສຽງ)
 // ==========================================
-// ==========================================
-// 🌟 ລະບົບສຽງອ່ານພາສາລາວ (Google Translate TTS - GTX Server)
-// ==========================================
-// ==========================================
-// 🌟 ລະບົບສຽງອ່ານພາສາລາວ (Google Translate TTS - GTX Server)
-// ==========================================
-let currentAudio = null; 
+let ttsAudio = new Audio(); // 🌟 สั่งสร้างเครื่องเล่นเสียงรอไว้เครื่องเดียวเลย
+
+// ฟังก์ชันสำหรับขออนุญาตบราวเซอร์ (ต้องเรียกใช้ตอนพนักงานกดปุ่มส่ง)
+function unlockAudio() {
+    ttsAudio.play().catch(()=>{});
+    ttsAudio.pause();
+    ttsAudio.src = '';
+}
 
 function speakText(text) {
     const autoSpeakToggle = document.getElementById('auto-speak');
+    // เช็กว่าสวิตช์เสียงเปิดอยู่ไหม ถ้าปิดก็หยุดเลย
     if (!autoSpeakToggle || !autoSpeakToggle.checked) return;
     
-    // หยุดเสียงเดิมที่กำลังเล่นอยู่
-    if (currentAudio) {
-        currentAudio.pause();
-        currentAudio = null;
-    }
-    window.speechSynthesis.cancel(); // ปิดเสียงของระบบคอมพิวเตอร์ทิ้งไปเลย จะได้ไม่อ่านแทรก
+    window.speechSynthesis.cancel(); 
 
-    // ทำความสะอาดข้อความ
     let cleanText = text.replace(/[\*\#\_]/g, " ").replace(/<[^>]*>?/gm, ' ').trim();
     if (!cleanText) return;
 
-    // หั่นข้อความเป็นท่อนๆ (ไม่เกิน 150 ตัวอักษร)
     let chunks = cleanText.match(/.{1,150}(?:\s|$)|.{1,150}/g) || [cleanText];
     let index = 0;
 
     function playNextChunk() {
         if (index >= chunks.length || !autoSpeakToggle.checked) return;
         
-        // 🌟 เปลี่ยนมาใช้ลิงก์ gtx ของ Google API จะไม่โดนบล็อกครับ
         let url = `https://translate.googleapis.com/translate_tts?client=gtx&ie=UTF-8&tl=lo&q=${encodeURIComponent(chunks[index])}`;
-        currentAudio = new Audio(url);
+        ttsAudio.src = url; // 🌟 ใช้เครื่องเล่นเสียงตัวเดิมที่ขออนุญาตไว้แล้ว
         
-        currentAudio.onended = () => {
+        ttsAudio.onended = () => {
             index++;
-            playNextChunk(); // เล่นท่อนต่อไป
+            playNextChunk(); 
         };
         
-        // พยายามเล่นเสียง
-        let playPromise = currentAudio.play();
-        if (playPromise !== undefined) {
-            playPromise.catch(e => {
-                console.log("Browser blocked autoplay:", e);
-                // ถ้าบราวเซอร์บล็อกเสียง ให้ข้ามไป
-            });
-        }
+        ttsAudio.play().catch(e => console.log("Audio Blocked:", e));
     }
     
     playNextChunk();
@@ -782,10 +772,8 @@ function speakText(text) {
 
 function toggleAutoSpeak(isChecked) {
     if (!isChecked) {
-        if (currentAudio) {
-            currentAudio.pause();
-            currentAudio = null;
-        }
+        ttsAudio.pause();
+        ttsAudio.src = '';
         window.speechSynthesis.cancel();
     }
 }
