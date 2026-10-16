@@ -725,12 +725,62 @@ async function toggleMic() {
     }
 }
 
+// ==========================================
+// 🌟 ລະບົບສຽງອ່ານພາສາລາວ (Google Translate TTS)
+// ==========================================
+let currentAudio = null; // ตัวแปรเก็บเสียงที่กำลังเล่น เพื่อให้สั่งหยุดได้
+
 function speakText(text) {
     if (!('speechSynthesis' in window) || !autoSpeakToggle.checked) return;
-    window.speechSynthesis.cancel(); 
-    const utterance = new SpeechSynthesisUtterance(text.replace(/[\*\#\_]/g, ""));
-    utterance.rate = 0.9; 
-    window.speechSynthesis.speak(utterance);
+    
+    // 1. หยุดเสียงเดิมที่กำลังเล่นอยู่ (ถ้ามี)
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+    }
+    window.speechSynthesis.cancel();
+
+    // 2. ทำความสะอาดข้อความ ลบสัญลักษณ์ต่างๆ ทิ้งให้เหลือแต่ตัวหนังสือ
+    let cleanText = text.replace(/[\*\#\_]/g, " ").replace(/<[^>]*>?/gm, ' ').trim();
+    if (!cleanText) return;
+
+    // 3. หั่นข้อความเป็นท่อนๆ (ท่อนละไม่เกิน 150 ตัวอักษร) เพราะระบบ Google รับได้จำกัด
+    let chunks = cleanText.match(/.{1,150}(?:\s|$)|.{1,150}/g) || [cleanText];
+    let index = 0;
+
+    // 4. ฟังก์ชันเล่นเสียงต่อเนื่องทีละท่อน
+    function playNextChunk() {
+        if (index >= chunks.length || !autoSpeakToggle.checked) return;
+        
+        // 🌟 ดึงเสียงภาษาลาว (tl=lo) จาก Google Translate มาเล่น
+        let url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=lo&q=${encodeURIComponent(chunks[index])}`;
+        currentAudio = new Audio(url);
+        
+        currentAudio.onended = playNextChunk; // เล่นจบแล้วให้ต่อท่อนถัดไปอัตโนมัติ
+        
+        currentAudio.play().catch(e => {
+            // กรณีระบบขัดข้อง ให้สลับไปใช้ระบบเสียงของเครื่อง (Fallback)
+            const utterance = new SpeechSynthesisUtterance(chunks[index]);
+            utterance.lang = 'lo-LA'; // บังคับให้พยายามอ่านเป็นลาว
+            utterance.rate = 0.9;
+            utterance.onend = playNextChunk;
+            window.speechSynthesis.speak(utterance);
+        });
+        index++;
+    }
+    
+    playNextChunk();
+}
+
+// 🌟 ฟังก์ชันสำหรับปิดเสียงทันทีเวลากดสวิตช์ปิด
+function toggleAutoSpeak(isChecked) {
+    if (!isChecked) {
+        if (currentAudio) {
+            currentAudio.pause();
+            currentAudio = null;
+        }
+        window.speechSynthesis.cancel();
+    }
 }
 
 function handleEnter(event) { if (event.key === 'Enter') sendMessage(); }
