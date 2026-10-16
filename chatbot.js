@@ -728,51 +728,58 @@ async function toggleMic() {
 // ==========================================
 // 🌟 ລະບົບສຽງອ່ານພາສາລາວ (Google Translate TTS)
 // ==========================================
-let currentAudio = null; // ตัวแปรเก็บเสียงที่กำลังเล่น เพื่อให้สั่งหยุดได้
+// ==========================================
+// 🌟 ລະບົບສຽງອ່ານພາສາລາວ (Google Translate TTS - GTX Server)
+// ==========================================
+// ==========================================
+// 🌟 ລະບົບສຽງອ່ານພາສາລາວ (Google Translate TTS - GTX Server)
+// ==========================================
+let currentAudio = null; 
 
 function speakText(text) {
-    if (!('speechSynthesis' in window) || !autoSpeakToggle.checked) return;
+    const autoSpeakToggle = document.getElementById('auto-speak');
+    if (!autoSpeakToggle || !autoSpeakToggle.checked) return;
     
-    // 1. หยุดเสียงเดิมที่กำลังเล่นอยู่ (ถ้ามี)
+    // หยุดเสียงเดิมที่กำลังเล่นอยู่
     if (currentAudio) {
         currentAudio.pause();
         currentAudio = null;
     }
-    window.speechSynthesis.cancel();
+    window.speechSynthesis.cancel(); // ปิดเสียงของระบบคอมพิวเตอร์ทิ้งไปเลย จะได้ไม่อ่านแทรก
 
-    // 2. ทำความสะอาดข้อความ ลบสัญลักษณ์ต่างๆ ทิ้งให้เหลือแต่ตัวหนังสือ
+    // ทำความสะอาดข้อความ
     let cleanText = text.replace(/[\*\#\_]/g, " ").replace(/<[^>]*>?/gm, ' ').trim();
     if (!cleanText) return;
 
-    // 3. หั่นข้อความเป็นท่อนๆ (ท่อนละไม่เกิน 150 ตัวอักษร) เพราะระบบ Google รับได้จำกัด
+    // หั่นข้อความเป็นท่อนๆ (ไม่เกิน 150 ตัวอักษร)
     let chunks = cleanText.match(/.{1,150}(?:\s|$)|.{1,150}/g) || [cleanText];
     let index = 0;
 
-    // 4. ฟังก์ชันเล่นเสียงต่อเนื่องทีละท่อน
     function playNextChunk() {
         if (index >= chunks.length || !autoSpeakToggle.checked) return;
         
-        // 🌟 ดึงเสียงภาษาลาว (tl=lo) จาก Google Translate มาเล่น
-        let url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=lo&q=${encodeURIComponent(chunks[index])}`;
+        // 🌟 เปลี่ยนมาใช้ลิงก์ gtx ของ Google API จะไม่โดนบล็อกครับ
+        let url = `https://translate.googleapis.com/translate_tts?client=gtx&ie=UTF-8&tl=lo&q=${encodeURIComponent(chunks[index])}`;
         currentAudio = new Audio(url);
         
-        currentAudio.onended = playNextChunk; // เล่นจบแล้วให้ต่อท่อนถัดไปอัตโนมัติ
+        currentAudio.onended = () => {
+            index++;
+            playNextChunk(); // เล่นท่อนต่อไป
+        };
         
-        currentAudio.play().catch(e => {
-            // กรณีระบบขัดข้อง ให้สลับไปใช้ระบบเสียงของเครื่อง (Fallback)
-            const utterance = new SpeechSynthesisUtterance(chunks[index]);
-            utterance.lang = 'lo-LA'; // บังคับให้พยายามอ่านเป็นลาว
-            utterance.rate = 0.9;
-            utterance.onend = playNextChunk;
-            window.speechSynthesis.speak(utterance);
-        });
-        index++;
+        // พยายามเล่นเสียง
+        let playPromise = currentAudio.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(e => {
+                console.log("Browser blocked autoplay:", e);
+                // ถ้าบราวเซอร์บล็อกเสียง ให้ข้ามไป
+            });
+        }
     }
     
     playNextChunk();
 }
 
-// 🌟 ฟังก์ชันสำหรับปิดเสียงทันทีเวลากดสวิตช์ปิด
 function toggleAutoSpeak(isChecked) {
     if (!isChecked) {
         if (currentAudio) {
