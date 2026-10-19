@@ -123,7 +123,7 @@
           <div class="header-text">
             <span id="bot-title">SINA</span>
             <small>AI ຊ່ວຍຕອບຄຳຖາມກ່ຽວກັບ ສິນຊັບເມືອງເໜືອ</small>
-            <small>v 0.0.7.5</small>
+            <small>v 0.0.7.6</small>
           </div>
         </div>
 
@@ -145,7 +145,7 @@
                   <img src="Nrng-Khai.png" alt="SINA Logo" class="settings-bot-logo">
                   <h1>SINA Chatbot</h1>
                   <p>AI ຜູ້ຊ່ວຍອັດສະລິຍະ ສິນຊັບເມືອງເໜືອ</p>
-                  <span class="settings-version">v 0.0.6.4</span>
+                  <span class="settings-version">v 0.0.7.6</span>
               </div>
               
               <hr class="settings-divider">
@@ -296,17 +296,8 @@
             <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
           </svg>
         </button>
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
+        
+         
             <path
               d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"
             ></path>
@@ -337,7 +328,7 @@
           </svg>
         </button>
 
-        <input type="text" id="user-input" class="chat-input" placeholder="ພິມ, ເວົ້າ ຫຼື ແນບເອກະສານ..." onkeypress="handleEnter(event)" onclick="checkAndShowPromptGuide()" data-title="💬 ພິມຄຳຖາມ" data-intro="ພິມຄຳຖາມທີ່ທ່ານສົງໄສໃສ່ບ່ອນນີ້ ແລ້ວກົດສົ່ງເພື່ອລົມກັບ SINA ໄດ້ເລີຍ" />
+        <textarea id="user-input" class="chat-input" rows="1" placeholder="ພິມ, ເວົ້າ ຫຼື ແນບເອກະສານ..." onkeydown="handleEnter(event)" oninput="resizeChatInput()" onclick="checkAndShowPromptGuide()" data-title="💬 ພິມຄຳຖາມ" data-intro="ພິມຄຳຖາມທີ່ທ່ານສົງໄສໃສ່ບ່ອນນີ້ ແລ້ວກົດສົ່ງເພື່ອລົມກັບ SINA ໄດ້ເລີຍ"></textarea>
 
         <div class="model-selector-container">
           <input type="hidden" id="ai-model-select" value="hr" />

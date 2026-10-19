@@ -295,7 +295,7 @@ async function sendMessage() {
     // 👇 เติมบรรทัดนี้ลงไป เพื่อปลดล็อกเสียงทันทีที่กดส่งข้อความ 👇
     unlockAudio();
 
-    let userDisplayHtml = text;
+    let userDisplayHtml = text.replace(/\n/g, '<br>');
     if (currentFiles.length > 0) {
         let filesHtml = '<div style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 5px;">';
         currentFiles.forEach(file => {
@@ -303,7 +303,7 @@ async function sendMessage() {
             else filesHtml += `<img src="data:${file.mimeType};base64,${file.base64}" class="chat-img" onclick="openModal(this.src)" style="max-width: 150px; max-height: 150px; border-radius: 8px; object-fit: cover; cursor: pointer;">`;
         });
         filesHtml += '</div>';
-        userDisplayHtml = filesHtml + text;
+        userDisplayHtml = filesHtml + text.replace(/\n/g, '<br>');
     }
 
     const welcomeMsg = document.getElementById('welcome-message');
@@ -311,6 +311,7 @@ async function sendMessage() {
 
     appendMessage(userDisplayHtml, 'user-message', null, true); 
     userInput.value = '';
+    resizeChatInput();
     toggleInput(false);
 
     const userId = localStorage.getItem('ssmi_user_id') || "Unknown";
@@ -614,6 +615,7 @@ async function submitRecordedAudio(audioBlob) {
     if (data.transcript) {
         const finalTranscript = enforceLaoTranscript(data.transcript);
         userInput.value = finalTranscript;
+        resizeChatInput();
         userInput.focus();
         userInput.setSelectionRange(userInput.value.length, userInput.value.length);
         return;
@@ -699,6 +701,7 @@ if (SpeechRecognition) {
     recognition.onresult = (event) => {
         const finalTranscript = enforceLaoTranscript(event.results[0][0].transcript);
         userInput.value = finalTranscript;
+        resizeChatInput();
         userInput.focus();
         userInput.setSelectionRange(userInput.value.length, userInput.value.length);
     };
@@ -815,7 +818,18 @@ function toggleAutoSpeak(isChecked) {
     }
 }
 
-function handleEnter(event) { if (event.key === 'Enter') sendMessage(); }
+function resizeChatInput() {
+    userInput.style.height = 'auto';
+    const maxHeight = Math.min(window.innerHeight * 0.4, 240);
+    userInput.style.height = `${Math.min(userInput.scrollHeight, maxHeight)}px`;
+    userInput.style.overflowY = userInput.scrollHeight > maxHeight ? 'auto' : 'hidden';
+}
+
+function handleEnter(event) {
+    if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
+    event.preventDefault();
+    sendMessage();
+}
 
 function appendMessage(text, className, id = null, isHtml = false) {
     const messageDiv = document.createElement('div');
