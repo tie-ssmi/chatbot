@@ -1,5 +1,5 @@
 var GEMINI_API_KEYS = [
-  "1111111111111111111111111"
+  "111111111111"
 ];
 var GOOGLE_DOC_ID = "1cObuEeUbwHTpA05WoHQVymlDMVr-ZR0KVzLjSsWkvC0";
 var GOOGLE_TXT_ID = "1tx6FwdLdDi9Lzl-Ghk780X58XbGm7VLg00"; 
@@ -238,17 +238,30 @@ function doPost(e) {
         "expense": "AI ບັນຊີ (ຄຸ້ມຄອງລາຍຈ່າຍ)",
         "loan_gov": "AI ສິນເຊື່ອ (ລັດຖະກອນ)",
         "loan_sec": "AI ສິນເຊື່ອ (ຫຼັກຊັບຄ້ຳປະກັນ)",
-        "deposit": "AI ເງິນຝາກ"
+        "deposit": "AI ເງິນຝາກ",
+        // 👇 เพิ่ม 5 โหมดใหม่นี้เข้าไป 👇
+        "process_hr": "AI ຂະບວນການ (HR)",
+        "process_expense": "AI ຂະບວນການ (ບັນຊີ)",
+        "process_loan_gov": "AI ຂະບວນການ (ສິນເຊື່ອລັດ)",
+        "process_loan_sec": "AI ຂະບວນການ (ສິນເຊື່ອຫຼັກຊັບ)",
+        "process_it": "AI ຂະບວນການກ່ຽວກັບລະບົບ (IT)",
+        // 👆 ---------------------- 👆
+        "other": "AI ອື່ນໆ (ນອກເໜືອລະບຽບ)"
       };
       var currentAiName = tabMappingLao[selectedCategory] || "AI ບຸກຄະລາກອນ (HR)";
 
-      // 1. ດຶງຂໍ້ມູນທັງຫມົດຈາກ Docs
+      // 1. ດຶງຂໍ້ມູນທັງຫມົດຈາກ Docs (ທັງ 3 ໄຟລ໌ ແລະ ທຸກແທັບ)
       var fullKnowledgeContext = getKnowledgeByCategory(selectedCategory);
       if (!fullKnowledgeContext) return createJsonResponse({ error: "ຂໍອະໄພ, ບໍ່ພົບຂໍ້ມູນລະບຽບໃນໝວດໝູ່ນີ້" });
 
-      // 🌟 2. ຍົກເລີກການຫັ່ນເອກະສານ (RAG) ໃຫ້ສົ່ງທັງໝົດໃຫ້ Gemini ອ່ານເລີຍ!
-      // ເນື່ອງຈາກ Gemini 2.5 ມີຄວາມສາມາດອ່ານເອກະສານ 50 ໜ້າໄດ້ສະບາຍ ແລະ ປ້ອງກັນບັນຫາການພິມຄຳສັບຕິດກັນ
-      var knowledgeContext = fullKnowledgeContext;
+      // 🌟 2. ເອົາລະບົບ RAG ກັບມາໃຊ້: ໃຫ້ມັນຊອກຫາສະເພາະ "ຫົວຂໍ້ທີ່ກ່ຽວຂ້ອງ" ຈາກ 3 ໄຟລ໌ ກ່ອນສົ່ງໃຫ້ AI 
+      // ເພື່ອປ້ອງກັນບັນຫາຂໍ້ມູນໃຫຍ່ເກີນໄປຈົນລະບົບຄ້າງ (Timeout)
+      var knowledgeContext = extractRelevantContext(fullKnowledgeContext, userMessage);
+      
+      // ຖ້າຊອກຫາບໍ່ພົບຄຳທີ່ກົງກັນເລີຍ, ໃຫ້ຕັດເອົາສະເພາະ 15,000 ຕົວອັກສອນທຳອິດໄປໃຫ້ AI ອ່ານແທນ (ປ້ອງກັນ Error)
+      if (!knowledgeContext) {
+          knowledgeContext = fullKnowledgeContext.substring(0, 15000);
+      }
 
       var historyContext = buildHistoryTextFromClient(clientHistory);
       if (!historyContext) historyContext = getRecentHistoryText(userId, sessionId);
@@ -263,17 +276,26 @@ Your strict rules:
 3. Respond in clear, polite Lao language.
 
 --- 🌟 CROSS-DEPARTMENT ROUTING (CRITICAL) 🌟 ---
-4. If the user asks a question that is clearly NOT related to your current department (${currentAiName}) but belongs to another known department (like HR, Expense, Loan, or Deposit), you MUST NOT say "I don't know". 
-Instead, politely explain that they are in the wrong menu, and suggest they change the AI model. 
-Example response format: "ຄຳຖາມນີ້ເບິ່ງຄືວ່າຈະກ່ຽວຂ້ອງກັບພະແນກອື່ນ. ຕອນນີ້ທ່ານກຳລັງເລືອກໃຊ້ງານ **${currentAiName}** ຢູ່. ກະລຸນາປ່ຽນໂໝດ AI (ຢູ່ເມນູດ້ານເທິງ) ໄປເປັນໂໝດທີ່ກ່ຽວຂ້ອງ ເພື່ອໃຫ້ໄດ້ຄຳຕອບທີ່ຖືກຕ້ອງເດີ້."
+4. 🌟 FIRST PRIORITY: Always check your provided context text FIRST. If the context text contains the information to answer the user's question, you MUST answer it directly! Do not route them to another department (e.g., If you are in IT but your text has the "HRM System Manual", you must answer the HRM system question!).
+5. ONLY if the answer is completely missing from your context text AND the question clearly belongs to another known department, politely explain that they might be in the wrong menu. Example response: "ຄຳຖາມນີ້ເບິ່ງຄືວ່າຈະກ່ຽວຂ້ອງກັບພະແນກອື່ນ. ຕອນນີ້ທ່ານກຳລັງເລືອກໃຊ້ງານ **${currentAiName}** ຢູ່. ກະລຸນາປ່ຽນໂໝດ AI ໄປເປັນໂໝດທີ່ກ່ຽວຂ້ອງ ເພື່ອໃຫ້ໄດ້ຄຳຕອບທີ່ຖືກຕ້ອງເດີ້."
 
 --- AUDITOR & MULTIMODAL RULES ---
-5. If the user uploads multiple documents, cross-check values across them and compare with the regulations in your context.
-6. 🌟 CRITICAL RULE FOR QUOTATIONS (ໃບສະເໜີລາຄາ): If the uploaded documents are Quotations for price comparison, it is NORMAL for them to have DIFFERENT dates and DIFFERENT total amounts. DO NOT flag different amounts or dates as an error. Your job is only to verify that they are quoting for the SAME items/services, and check if the minimum required number of quotations is met according to the rules.
-7. Summarize findings concisely using bullet points. Point out any real discrepancies, and state whether it is approved/correct.
+6. If the user uploads multiple documents, cross-check values across them and compare with the regulations in your context.
+7. 🌟 CRITICAL RULE FOR QUOTATIONS (ໃບສະເໜີລາຄາ): If the uploaded documents are Quotations for price comparison, it is NORMAL for them to have DIFFERENT dates and DIFFERENT total amounts. DO NOT flag different amounts or dates as an error. Your job is only to verify that they are quoting for the SAME items/services, and check if the minimum required number of quotations is met according to the rules.
+8. Summarize findings concisely using bullet points. Point out any real discrepancies, and state whether it is approved/correct.
 
 --- 🌟 RULE FOR CITATIONS (ອ້າງອີງ) 🌟 ---
-8. 🌟 CRITICAL: ທຸກຄັ້ງທີ່ຕອບຄຳຖາມກ່ຽວກັບລະບຽບການ, ເຈົ້າຕ້ອງບອກເລກທີ "ມາດຕາ", "ຂໍ້", ຫຼື "ໝວດ" ທີ່ອ້າງອີງສະເໝີ (ຖ້າມີໃນຂໍ້ມູນ). ຕົວຢ່າງ: "ອີງຕາມມາດຕາ X, ຂໍ້ Y ໄດ້ລະບຸໄວ້ວ່າ..."`;
+9. 🌟 CRITICAL: ທຸກຄັ້ງທີ່ຕອບຄຳຖາມກ່ຽວກັບລະບຽບການ ຫຼື ຂັ້ນຕອນຕ່າງໆ, ເຈົ້າຕ້ອງບອກເລກທີ "ມາດຕາ", "ຂໍ້", ຫຼື "ໝວດ" ທີ່ອ້າງອີງສະເໝີ (ຖ້າມີໃນຂໍ້ມູນ). ຕົວຢ່າງ: "ອີງຕາມມາດຕາ X, ຂໍ້ Y ໄດ້ລະບຸໄວ້ວ່າ..."`;
+// 🌟 โค้ดใหม่: ถ้าเป็นโหมด "อื่นๆ" ให้ปลดล็อกกฎ ห้ามเดา เพื่อให้ตอบคำถามทั่วไปได้
+      if (selectedCategory === "other") {
+          systemPrompt = `You are an AI assistant for SSMI named "SINA". You are speaking with: ${userName}.
+Currently, the user has selected to speak with the: **${currentAiName}** mode.
+
+Your rules:
+1. You are free to answer general knowledge questions, draft texts, translate, summarize, or provide general advice.
+2. Respond in clear, polite Lao language.
+3. If the user asks about specific SSMI company regulations in this mode, kindly remind them to switch to the correct AI mode (like HR, Expense, etc.) for accurate answers. Example: "ຖ້າເປັນຄຳຖາມກ່ຽວກັບລະບຽບການຂອງບໍລິສັດ, ກະລຸນາປ່ຽນໂໝດ AI ໄປທີ່ພະແນກທີ່ກ່ຽວຂ້ອງ ເພື່ອຄວາມຖືກຕ້ອງເດີ້."`;
+      }
 
       var finalPrompt = "Context ຂໍ້ມູນລະບຽບການ: \n" + knowledgeContext + "\n\n";
       if (historyContext !== "") finalPrompt += historyContext;
@@ -478,7 +500,7 @@ function getChatThreads(userId) {
 // ==========================================
 function getKnowledgeByCategory(category) {
   var cache = CacheService.getScriptCache();
-  var cacheKey = "DOC_FILE_MULTI_" + category;
+  var cacheKey = "DOC_FILE_MULTI_V7_" + category;
   var cachedData = cache.get(cacheKey);
   if (cachedData) return cachedData; 
 
@@ -502,22 +524,57 @@ function getKnowledgeByCategory(category) {
       ],
       "deposit": [
           "1ESnXlGbJTGH-rjLzjcEUsSNd9vA9PGajrKQLSQCGM5k" // 🌟 จะ 3 ไฟล์ หรือ 4 ไฟล์ก็ใส่ต่อกันมาได้เลยครับ
-      ]
+      ],
+      "other": [
+        "1z7e_lwQEpGI7uxYqoOE04ifh660Nh_0U6rqNGr6iTvs"
+        ],
+        "process_hr": [ "1oC7n9ZHZYydt1Fy320cANNF-Qz4LTtghTbKJ5DxT1zk"//ມາດຕະຖານການເຮັດວຽກຂອງບໍລິຫານ
+         ],
+      "process_expense": [ "ໃສ່_ID_ໄຟລ໌_ຂະບວນການ_ບັນຊີ" ],
+      "process_loan_gov": [ "ໃສ່_ID_ໄຟລ໌_ຂະບວນການ_ສິນເຊື່ອລັດ" ],
+      "process_loan_sec": [ "ໃສ່_ID_ໄຟລ໌_ຂະບວນການ_ສິນເຊື່ອຫຼັກຊັບ" ],
+      "process_it": [
+        "169JoZ-f2WS2NWpHkaAJvKcrfnx_LUb_xggpyJDFY34s"
+      ],
     };
 
     var targetDocIds = docMapping[category] || docMapping["hr"];
     var extractedText = "--- [ຂໍ້ມູນລະບຽບການ] ---\n\n";
     
-    // 🌟 วนลูปอ่านข้อมูลทุกไฟล์ที่ระบุไว้ในหมวดนั้นๆ มาต่อกัน
+    // 🌟 ย้ายฟังก์ชันอ่านแท็บมาไว้ข้างนอก loop เพื่อให้โค้ดดึงข้อมูลได้ 100% ไม่ทับซ้อนกัน
+    function extractAllTabsRecursive(tabs) {
+        var textResult = "";
+        for (var t = 0; t < tabs.length; t++) {
+            var tab = tabs[t];
+            var docTab = tab.asDocumentTab();
+            if (docTab) {
+                textResult += "--- [ຊື່ແທັບ: " + tab.getTitle() + "] ---\n" + docTab.getBody().getText() + "\n\n";
+            }
+            var childTabs = tab.getChildTabs();
+            if (childTabs && childTabs.length > 0) {
+                textResult += extractAllTabsRecursive(childTabs); // ดึงแท็บย่อยซ้อนแท็บย่อย
+            }
+        }
+        return textResult;
+    }
+
+    // วนลูปอ่านทุกไฟล์
     for (var i = 0; i < targetDocIds.length; i++) {
         try {
             var doc = DocumentApp.openById(targetDocIds[i].trim());
-            extractedText += "📄 [ເອກະສານອ້າງອີງພາກທີ " + (i+1) + "]:\n" + doc.getBody().getText() + "\n\n";
+            var allTabs = doc.getTabs();
+            
+            if (allTabs && allTabs.length > 0) {
+                extractedText += "📄 [ເອກະສານອ້າງອີງພາກທີ " + (i+1) + "]:\n" + extractAllTabsRecursive(allTabs) + "\n\n";
+            } else {
+                extractedText += "📄 [ເອກະສານອ້າງອີງພາກທີ " + (i+1) + "]:\n" + doc.getBody().getText() + "\n\n";
+            }
         } catch (docErr) {
             console.log("ບໍ່ສາມາດອ່ານໄຟລ໌ ID: " + targetDocIds[i]);
         }
     }
 
+    // ถ้าดึงเนื้อหาสำเร็จ ให้จำไว้ (รอบนี้จะจำทั้ง 3 ไฟล์รวมกันเลย)
     if (extractedText !== "--- [ຂໍ້ມູນລະບຽບການ] ---\n\n") { 
         try { cache.put(cacheKey, extractedText, 3600); } catch(e) {} 
     }
@@ -678,21 +735,19 @@ function checkUserQuotaLogic(userId) {
   return { isLimited: false, history: askHistory, cache: rateLimitCache, limitKey: limitKey };
 }
 // ==========================================
-// 🌟 ຟັງຊັນ RAG ຄົ້ນຫາສະເພາະຍ່ອຫົວທີ່ກ່ຽວຂ້ອງ (ອັບເກຣດ 3.0 ແກ້ບັນຫາມົ້ວ)
+// 🌟 ຟັງຊັນ RAG ຄົ້ນຫາສະເພາະຍ່ອຫົວທີ່ກ່ຽວຂ້ອງ (ອັບເກຣດ 5.0 ຂະຫຍາຍໂຄຕ້າການອ່ານ)
 // ==========================================
 function extractRelevantContext(fullText, userMessage) {
   if (!fullText) return null;
 
   var lowMsg = userMessage.toLowerCase();
 
-  // 🌟 1. ดักคำถามกว้างๆ (Broad Questions)
-  // ຖ້າພະນັກງານຖາມກວ້າງໆ ໃຫ້ດຶງ 4500 ຕົວອັກສອນທຳອິດ (ມັກຈະເປັນສາລະບານ/ບົດນຳ) ສົ່ງໄປໃຫ້ AI ເລີຍ
+  // 1. ดักคำถามกว้างๆ
   if (/ສະຫຼຸບ|ມີຂໍ້ມູນຫຍັງແດ່|ມີຫຍັງແດ່|ທັງໝົດ|ລວມ|ມີລະບຽບຫຍັງ|ລາຍລະອຽດຫຍັງ/i.test(lowMsg)) {
-      return "--- (ນີ້ຄືພາກສະຫຼຸບ/ສາລະບານຂອງເອກະສານ) ---\n\n" + fullText.substring(0, 4500);
+      return fullText.substring(0, 15000); // ขยายโควตาสำหรับคำถามกว้างๆ
   }
 
-  // 2. ຄຳສັບທົ່ວໄປທີ່ຄວນຕັດຖິ້ມ (Stop words) เพิ่มคำว่า เจ๊า, ข้อย, ข้อมูล ลงไปเพื่อกันมันเอาไปค้นหา
-  var questionWords = ["ເຈົ້າ", "ຂ້ອຍ", "ຂໍ້ມູນ", "ລາຍລະອຽດ", "ແນວໃດ", "ແມ່ນຫຍັງ", "ເທົ່າໃດ", "ຈັກມື້", "ໄດ້ບໍ່", "ອະທິບາຍ", "ກ່ຽວກັບ", "ຊ່ວຍ", "ບອກ", "ຂໍຖາມ", "ຊ່ວຍແດ່", "ຕ້ອງ", "ເຮັດ", "ມີ", "ໃດແດ່", "ຢາກ", "ການ", "ຂອງ", "ໃນ", "ແລະ", "ໃຫ້", "ຄື", "ດັ່ງນີ້", "ອື່ນໆ"];
+  var questionWords = ["ເຈົ້າ", "ຂ້ອຍ", "ຂໍ້ມູນ", "ລາຍລະອຽດ", "ແນວໃດ", "ແມ່ນຫຍັງ", "ເທົ່າໃດ", "ຈັກມື້", "ໄດ້ບໍ່", "ອະທິບາຍ", "ກ່ຽວກັບ", "ຊ່ວຍ", "ບອກ", "ຂໍຖາມ", "ຊ່ວຍແດ່", "ຕ້ອງ", "ເຮັດ", "ມີ", "ໃດແດ່", "ຢາກ", "ການ", "ຂອງ", "ໃນ", "ແລະ", "ໃຫ້", "ຄື", "ດັ່ງນີ້", "ອື່ນໆ", "ວິທີ", "ຂັ້ນຕອນ"];
   
   var searchWord = lowMsg;
   for (var i = 0; i < questionWords.length; i++) {
@@ -701,7 +756,7 @@ function extractRelevantContext(fullText, userMessage) {
   
   var keywords = searchWord.split(/\s+/).filter(function(kw) { return kw.length > 2; });
 
-  if (keywords.length === 0) return fullText.substring(0, 4000);
+  if (keywords.length === 0) return fullText.substring(0, 15000);
 
   var paragraphs = fullText.split(/\n/);
   var matchedChunks = [];
@@ -709,7 +764,7 @@ function extractRelevantContext(fullText, userMessage) {
   for (var j = 0; j < paragraphs.length; j++) {
      var p = paragraphs[j].trim();
      var pLower = p.toLowerCase();
-     if (p.length < 15) continue; 
+     if (p.length < 10) continue; 
 
      var matchCount = 0;
      for (var k = 0; k < keywords.length; k++) {
@@ -719,11 +774,19 @@ function extractRelevantContext(fullText, userMessage) {
      }
 
      if (matchCount > 0) {
-         var prev = (j > 0) ? paragraphs[j-1].trim() : "";
-         var next = (j < paragraphs.length - 1) ? paragraphs[j+1].trim() : "";
+         var startIdx = Math.max(0, j - 3);
+         var endIdx = Math.min(paragraphs.length - 1, j + 35); // 🌟 ກວາດລົງໄປເລິກເຖິງ 35 ບັນທັດ! ເພື່ອບໍ່ໃຫ້ຂັ້ນຕອນຂາດຫາຍ
+         var chunkLines = [];
+         
+         for (var n = startIdx; n <= endIdx; n++) {
+             if (paragraphs[n].trim() !== "") {
+                 chunkLines.push(paragraphs[n].trim());
+             }
+         }
+         
          matchedChunks.push({
              score: matchCount,
-             text: prev + "\n" + p + "\n" + next
+             text: chunkLines.join("\n")
          });
      }
   }
@@ -733,11 +796,12 @@ function extractRelevantContext(fullText, userMessage) {
   matchedChunks.sort(function(a, b) { return b.score - a.score; });
 
   var topChunks = [];
-  for(var m = 0; m < Math.min(4, matchedChunks.length); m++){
+  // 🌟 ຂະຫຍາຍໂຄຕ້າ! ເກັບເອົາ 8 ພາກສ່ວນທີ່ກົງກັນທີ່ສຸດ (ແຕ່ກ່ອນເອົາແຄ່ 3 ມັນເລີຍຕົກຫຼົ່ນ)
+  for(var m = 0; m < Math.min(8, matchedChunks.length); m++){ 
      topChunks.push(matchedChunks[m].text);
   }
 
-  return topChunks.join("\n\n--- (ຂ້າມເນື້ອຫາບາງສ່ວນ) ---\n\n");
+  return topChunks.join("\n\n...\n\n");
 }
 // ==========================================
 // 🌟 ຟັງຊັນປ່ຽນລະຫັດຜ່ານ

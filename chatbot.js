@@ -729,52 +729,89 @@ async function toggleMic() {
 }
 
 // ==========================================
-// 🌟 ລະບົບສຽງອ່ານພາສາລາວ (ອັບເກຣດ: ປ້ອງກັນ Browser ບລັອກສຽງ)
+// 🌟 ລະບົບສຽງອ່ານພາສາລາວ (ອັບເກຣດ: ປ້ອງກັນ Browser ບລັອກສຽງ 100%)
 // ==========================================
-let ttsAudio = new Audio(); // 🌟 สั่งสร้างเครื่องเล่นเสียงรอไว้เครื่องเดียวเลย
+let ttsAudio = new Audio(); 
+let audioUnlocked = false; // ตัวแปรเช็กว่าปลดล็อกเสียงหรือยัง
 
-// ฟังก์ชันสำหรับขออนุญาตบราวเซอร์ (ต้องเรียกใช้ตอนพนักงานกดปุ่มส่ง)
+// 🌟 ฟังก์ชันขออนุญาตบราวเซอร์ด้วย "เสียงเงียบ (Silent Audio)"
 function unlockAudio() {
-    ttsAudio.play().catch(()=>{});
-    ttsAudio.pause();
-    ttsAudio.src = '';
+    if (audioUnlocked) return; // ถ้าปลดล็อกแล้วไม่ต้องทำซ้ำ
+    
+    // ใช้ไฟล์เสียงเงียบความยาว 0.1 วินาที (รหัส Base64) เพื่อหลอกให้บราวเซอร์ยอมรับการเล่นเสียง
+    ttsAudio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+    
+    ttsAudio.play().then(() => {
+        ttsAudio.pause();
+        audioUnlocked = true; // บันทึกว่าปลดล็อกสำเร็จแล้ว!
+    }).catch((err) => {
+        console.log("Unlock failed:", err);
+    });
 }
+
 
 function speakText(text) {
-    const autoSpeakToggle = document.getElementById('auto-speak');
-    // เช็กว่าสวิตช์เสียงเปิดอยู่ไหม ถ้าปิดก็หยุดเลย
-    if (!autoSpeakToggle || !autoSpeakToggle.checked) return;
-    
-    window.speechSynthesis.cancel(); 
+    const toggle = document.getElementById('auto-speak');
+    if (!toggle || !toggle.checked) return;
 
-    let cleanText = text.replace(/[\*\#\_]/g, " ").replace(/<[^>]*>?/gm, ' ').trim();
+    window.speechSynthesis.cancel();
+    ttsAudio.pause();
+
+    const cleanText = (text || '')
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\*\*/g, '')
+        .replace(/[#*_`]/g, ' ')
+        .trim();
+
     if (!cleanText) return;
 
-    let chunks = cleanText.match(/.{1,150}(?:\s|$)|.{1,150}/g) || [cleanText];
+    // แยกข้อความตามประโยค โดยเก็บเครื่องหมายวรรคตอนไว้
+    const sentences = cleanText.match(/[^.!?\u0964\u0EAF]+[.!?\u0964\u0EAF]*|[^.!?\u0964\u0EAF]+/g) || [cleanText];
+
     let index = 0;
 
-    function playNextChunk() {
-        if (index >= chunks.length || !autoSpeakToggle.checked) return;
-        
-        let url = `https://translate.googleapis.com/translate_tts?client=gtx&ie=UTF-8&tl=lo&q=${encodeURIComponent(chunks[index])}`;
-        ttsAudio.src = url; // 🌟 ใช้เครื่องเล่นเสียงตัวเดิมที่ขออนุญาตไว้แล้ว
-        
-        ttsAudio.onended = () => {
-            index++;
-            playNextChunk(); 
+    function playNext() {
+        if (index >= sentences.length || !toggle.checked) return;
+
+        const sentence = sentences[index].trim();
+        index++;
+
+        if (!sentence) {
+            playNext();
+            return;
+        }
+
+        // เลือกภาษาตามตัวอักษรที่ใช้จริงในประโยค
+        const laoCount = (sentence.match(/[\u0E80-\u0EFF]/g) || []).length;
+        const latinCount = (sentence.match(/[A-Za-z]/g) || []).length;
+        const lang = laoCount >= latinCount ? 'lo' : 'en';
+
+        ttsAudio.onended = playNext;
+        ttsAudio.onerror = () => {
+            console.error('TTS playback failed:', lang, sentence);
         };
-        
-        ttsAudio.play().catch(e => console.log("Audio Blocked:", e));
+
+        ttsAudio.src =
+            'https://translate.googleapis.com/translate_tts' +
+            '?client=gtx&ie=UTF-8&tl=' + lang +
+            '&q=' + encodeURIComponent(sentence);
+
+        ttsAudio.play().catch(error => {
+            console.error('TTS error:', error);
+        });
     }
-    
-    playNextChunk();
+
+    playNext();
 }
+
 
 function toggleAutoSpeak(isChecked) {
     if (!isChecked) {
         ttsAudio.pause();
-        ttsAudio.src = '';
         window.speechSynthesis.cancel();
+    } else {
+        // 🌟 ถ้าพนักงานมากดเปิดสวิตช์ ให้ถือโอกาสปลดล็อกเสียงตรงนี้ด้วยเลย
+        unlockAudio();
     }
 }
 
