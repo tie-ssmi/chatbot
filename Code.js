@@ -186,7 +186,7 @@ function doPost(e) {
           remainString: quota.remainString || ""
       });
     }
-    if (action === "getThreads") return getChatThreads(requestData.userId);
+    if (action === "getThreads") return getChatThreads(requestData.userId, requestData.offset, requestData.limit);
 
     if (action === "transcribe") return handleAudioTranscription(requestData.base64Audio, requestData.mimeType);
 
@@ -276,16 +276,22 @@ Your strict rules:
 3. Respond in clear, polite Lao language.
 
 --- 🌟 CROSS-DEPARTMENT ROUTING (CRITICAL) 🌟 ---
-4. 🌟 FIRST PRIORITY: Always check your provided context text FIRST. If the context text contains the information to answer the user's question, you MUST answer it directly! Do not route them to another department (e.g., If you are in IT but your text has the "HRM System Manual", you must answer the HRM system question!).
-5. ONLY if the answer is completely missing from your context text AND the question clearly belongs to another known department, politely explain that they might be in the wrong menu. Example response: "ຄຳຖາມນີ້ເບິ່ງຄືວ່າຈະກ່ຽວຂ້ອງກັບພະແນກອື່ນ. ຕອນນີ້ທ່ານກຳລັງເລືອກໃຊ້ງານ **${currentAiName}** ຢູ່. ກະລຸນາປ່ຽນໂໝດ AI ໄປເປັນໂໝດທີ່ກ່ຽວຂ້ອງ ເພື່ອໃຫ້ໄດ້ຄຳຕອບທີ່ຖືກຕ້ອງເດີ້."
+4. 🌟 FIRST PRIORITY: Always check your provided context text FIRST. If the context text contains the information to answer the user's question, you MUST answer it directly!
+5. ONLY if the answer is completely missing from your context text AND the question clearly belongs to another known department, politely explain that they might be in the wrong menu.
 
 --- AUDITOR & MULTIMODAL RULES ---
 6. If the user uploads multiple documents, cross-check values across them and compare with the regulations in your context.
-7. 🌟 CRITICAL RULE FOR QUOTATIONS (ໃບສະເໜີລາຄາ): If the uploaded documents are Quotations for price comparison, it is NORMAL for them to have DIFFERENT dates and DIFFERENT total amounts. DO NOT flag different amounts or dates as an error. Your job is only to verify that they are quoting for the SAME items/services, and check if the minimum required number of quotations is met according to the rules.
-8. Summarize findings concisely using bullet points. Point out any real discrepancies, and state whether it is approved/correct.
+7. 🌟 CRITICAL RULE FOR QUOTATIONS: If the uploaded documents are Quotations for price comparison, it is NORMAL for them to have DIFFERENT dates and DIFFERENT total amounts. Your job is only to verify that they are quoting for the SAME items/services.
+8. Summarize findings concisely using bullet points. 
 
 --- 🌟 RULE FOR CITATIONS (ອ້າງອີງ) 🌟 ---
-9. 🌟 CRITICAL: ທຸກຄັ້ງທີ່ຕອບຄຳຖາມກ່ຽວກັບລະບຽບການ ຫຼື ຂັ້ນຕອນຕ່າງໆ, ເຈົ້າຕ້ອງບອກເລກທີ "ມາດຕາ", "ຂໍ້", ຫຼື "ໝວດ" ທີ່ອ້າງອີງສະເໝີ (ຖ້າມີໃນຂໍ້ມູນ). ຕົວຢ່າງ: "ອີງຕາມມາດຕາ X, ຂໍ້ Y ໄດ້ລະບຸໄວ້ວ່າ..."`;
+9. 🌟 CRITICAL: ທຸກຄັ້ງທີ່ຕອບຄຳຖາມກ່ຽວກັບລະບຽບການ, ບອກເລກທີ "ມາດຕາ", "ຂໍ້", ຫຼື "ໝວດ" ທີ່ອ້າງອີງສະເໝີ.
+10. 🌟 CRITICAL (ຮູບພາບປະກອບ): ຖ້າມີລິ້ງຮູບພາບ ![ຊື່ຮູບ](ລິ້ງ), ເຈົ້າຕ້ອງກ໊ອບປີ້ມາຕອບພ້ອມສະເໝີ!
+
+--- 🌟 SMART MATCHING & CLARIFICATION (ໃໝ່!) 🌟 ---
+11. 🌟 UNDERSTAND SYNONYMS: ພະນັກງານອາດຈະໃຊ້ຄຳສັບທົ່ວໄປ (ເຊັ່ນ: "ວັນພັກວັນເກີດ"). ຖ້າຄວາມໝາຍມັນກົງກັບຄຳສັບທາງການໃນເອກະສານ (ເຊັ່ນ: "ວັນຄ້າຍວັນເກີດ"), ໃຫ້ເຈົ້າອະນຸໂລມ ແລະ ຕອບຄຳຖາມນັ້ນເລີຍ ຫ້າມຕອບວ່າບໍ່ມີຂໍ້ມູນ.
+12. 🌟 ASK TO CLARIFY: ຖ້າຄຳຖາມສັ້ນເກີນໄປ, ກຳກວມ ຫຼື ໝາຍເຖິງລະບຽບໄດ້ຫຼາຍຂໍ້ (ຕົວຢ່າງ: ຖາມແຄ່ "ວັນພັກ" ໂດຍບໍ່ບອກວ່າພັກຫຍັງ), ຫ້າມເດົາເອງເດັດຂາດ! ໃຫ້ເຈົ້າຖາມກັບຄືນຢ່າງສຸພາບ ເພື່ອໃຫ້ພະນັກງານອະທິບາຍແຈ້ງຂຶ້ນ. 
+ຕົວຢ່າງການຕອບ: "ຂໍອະໄພ, ທ່ານໝາຍເຖິງ ວັນພັກປະຈຳປີ, ວັນພັກປ່ວຍ ຫຼື ວັນພັກປະເພດອື່ນ? ເພື່ອໃຫ້ SINA ສາມາດຊອກຫາຂໍ້ມູນໄດ້ຖືກຕ້ອງທີ່ສຸດເດີ້."`;
 // 🌟 โค้ดใหม่: ถ้าเป็นโหมด "อื่นๆ" ให้ปลดล็อกกฎ ห้ามเดา เพื่อให้ตอบคำถามทั่วไปได้
       if (selectedCategory === "other") {
           systemPrompt = `You are an AI assistant for SSMI named "SINA". You are speaking with: ${userName}.
@@ -460,36 +466,51 @@ function getRecentHistoryText(userId, targetSessionId) {
   } catch (e) { return ""; }
 }
 // 🌟 ระบบสร้างรายชื่อเมนูแถบด้านข้าง (ดึงเฉพาะประวัติล่าสุดของแต่ละห้องมาตั้งชื่อ)
-function getChatThreads(userId) {
+function getChatThreads(userId, offset, limit) {
   try {
     var sheet = SpreadsheetApp.openById(GOOGLE_SHEET_ID).getSheetByName(LOG_SHEET_NAME);
-    if (!sheet) return createJsonResponse({ threads: [] });
+    if (!sheet) return createJsonResponse({ threads: [], hasMore: false });
     
-    var data = getRecentLogRows(sheet, 3000, 8);
+    var pageOffset = Math.max(0, parseInt(offset, 10) || 0);
+    var pageLimit = Math.min(50, Math.max(1, parseInt(limit, 10) || 10));
+    var lastRow = sheet.getLastRow();
+    var firstRow = Math.max(2, lastRow - 2999);
+    var cursor = lastRow;
     var threadsMap = {};
     var threadsList = [];
 
-    for (var i = data.length - 1; i >= 1; i--) {
-      if (data[i][1].toString() === userId) {
-        var qText = data[i][3].toString();
-        
-        // 🌟 เพิ่มบรรทัดนี้: ห้ามเอาคำว่า SYSTEM_EVENT มาตั้งชื่อห้องแชท
-        if (qText.includes("[SYSTEM_EVENT]")) continue;
+    while (cursor >= firstRow && threadsList.length <= pageOffset + pageLimit) {
+      var chunkStart = Math.max(firstRow, cursor - 499);
+      var rows = sheet.getRange(chunkStart, 1, cursor - chunkStart + 1, 8).getValues();
 
-        var sid = data[i][7] ? data[i][7].toString() : "MAIN_SESSION";
-        if (!threadsMap[sid]) {
-          var title = qText.length > 30 ? qText.substring(0, 30) + "..." : qText;
-          threadsMap[sid] = true;
-          threadsList.push({
-            sessionId: sid,
-            title: title,
-            date: data[i][0]
-          });
+      for (var i = rows.length - 1; i >= 0 && threadsList.length <= pageOffset + pageLimit; i--) {
+        if (rows[i][1].toString() === userId) {
+          var qText = rows[i][3].toString();
+          
+          // 🌟 เพิ่มบรรทัดนี้: ห้ามเอาคำว่า SYSTEM_EVENT มาตั้งชื่อห้องแชท
+          if (qText.includes("[SYSTEM_EVENT]")) continue;
+
+          var sid = rows[i][7] ? rows[i][7].toString() : "MAIN_SESSION";
+          if (!threadsMap[sid]) {
+            var title = qText.length > 30 ? qText.substring(0, 30) + "..." : qText;
+            threadsMap[sid] = true;
+            threadsList.push({
+              sessionId: sid,
+              title: title,
+              date: rows[i][0]
+            });
+          }
         }
       }
+      cursor = chunkStart - 1;
     }
-    return createJsonResponse({ threads: threadsList });
-  } catch (e) { return createJsonResponse({ threads: [] }); }
+
+    var hasMore = threadsList.length > pageOffset + pageLimit;
+    return createJsonResponse({
+      threads: threadsList.slice(pageOffset, pageOffset + pageLimit),
+      hasMore: hasMore
+    });
+  } catch (e) { return createJsonResponse({ threads: [], hasMore: false }); }
 }
 
 // ==========================================
@@ -737,14 +758,133 @@ function checkUserQuotaLogic(userId) {
 // ==========================================
 // 🌟 ຟັງຊັນ RAG ຄົ້ນຫາສະເພາະຍ່ອຫົວທີ່ກ່ຽວຂ້ອງ (ອັບເກຣດ 5.0 ຂະຫຍາຍໂຄຕ້າການອ່ານ)
 // ==========================================
+// ==========================================
+// 🌟 ຟັງຊັນ RAG ຄົ້ນຫາສະເພາະຍ່ອຫົວທີ່ກ່ຽວຂ້ອງ (ອັບເກຣດ 6.0 - ລະບົບແປງຄຳສັບຄ້າຍຄືກັນ)
+// ==========================================
 function extractRelevantContext(fullText, userMessage) {
   if (!fullText) return null;
 
   var lowMsg = userMessage.toLowerCase();
 
+  // 🌟 ເພີ່ມລະບົບ "ຄຳສັບຄ້າຍຄືກັນ" (Synonyms Dictionary) 🌟
+  // ຖ້າພະນັກງານພິມຄຳທາງຊ້າຍມື ລະບົບຈະແອບຍັດຄຳທາງຂວາມືເຂົ້າໄປຊອກຫາໃນເອກະສານໃຫ້ແບບງຽບໆ
+  var synonyms = {
+      // ==========================================
+      // 1. ໝວດ ບຸກຄະລາກອນ ແລະ ວັນພັກ (HR)
+      // ==========================================
+      "ວັນພັກວັນເກີດ": "ວັນຄ້າຍວັນເກີດ",
+      "ພັກວັນເກີດ": "ວັນຄ້າຍວັນເກີດ",
+      "ເກີດລູກ": "ປະສູດ ແມ່ຍິງເກີດລູກ",
+      "ອອກລູກ": "ປະສູດ ແມ່ຍິງເກີດລູກ",
+      "ພັກເມຍເກີດລູກ": "ພັກເບິ່ງແຍງເມຍເກີດລູກ",
+      "ພັກຮ້ອນ": "ວັນພັກປະຈຳປີ",
+      "ພັກກິດ": "ວັນພັກກິດທຸລະ",
+      "ກິນດອງ": "ແຕ່ງງານ",
+      "ແຕ່ງດອງ": "ແຕ່ງງານ",
+      "ພັກກິນດອງ": "ພັກແຕ່ງງານ",
+      "ພັກແຕ່ງດອງ": "ພັກແຕ່ງງານ",
+      "ປ່ວຍ": "ປ່ວຍການ ພັກປ່ວຍ",
+      "ໃບແພດ": "ໃບຢັ້ງຢືນການແພດ",
+      "ຂາດວຽກ": "ປະລະໜ້າທີ່",
+      "ລາອອກ": "ສິ້ນສຸດການເປັນພະນັກງານ",
+      "ໄລ່ອອກ": "ຍົກເລີກສັນຍາແຮງງານ ການຖືກໄລ່ອອກ",
+      "ໂອທີ": "ເຮັດວຽກນອກໂມງການ",
+      "OT": "ເຮັດວຽກນອກໂມງການ ເງິນເພີ່ມໂມງ",
+      "ໂບນັດ": "ເງິນລາງວັນ",
+      "ແຈ້ງອອກ": "ແຈ້ງລາອອກ",
+      "ອອກວຽກ": "ສິ້ນສຸດການເປັນພະນັກງານ",
+      
+      // ==========================================
+      // 2. ໝວດ ສິນເຊື່ອ ແລະ ການກູ້ຢືມ (Loan & Credit)
+      // ==========================================
+      "ຢືມເງິນ": "ສະເໜີຂໍກູ້ຢືມ",
+      "ກູ້ເງິນ": "ສະເໜີຂໍກູ້ຢືມ",
+      "ຂໍກູ້": "ສະເໜີຂໍກູ້ຢືມ",
+      "ປ່ອຍກູ້": "ອະນຸມັດເງິນກູ້ ເບີກຈ່າຍເງິນ",
+      "ຄົນຄ້ຳ": "ຜູ້ຄ້ຳປະກັນ",
+      "ຄົນເຊັນຄ້ຳ": "ຜູ້ຄ້ຳປະກັນ",
+      "ຄົນກູ້ຮ່ວມ": "ຜູ້ກູ້ຮ່ວມ",
+      "ຜູ້ຢືມຮ່ວມ": "ຜູ້ກູ້ຮ່ວມ",
+      "ສະເຕດເມັ້ນ": "ບັນຊີສຳຮອງ Bank Statement",
+      "ໃບເຄື່ອນໄຫວບັນຊີ": "ບັນຊີສຳຮອງ",
+      "ປິດກ່ອນ": "ປິດບັນຊີກ່ອນກຳນົດ",
+      "ປິດໜີ້ກ່ອນ": "ປິດບັນຊີກ່ອນກຳນົດ",
+      "ຈ່າຍໝົດກ່ອນ": "ປິດບັນຊີກ່ອນກຳນົດ",
+      "ຄ່າແລ່ນເອກະສານ": "ຄ່າທຳນຽມການດຳເນີນງານດ້ານເອກະສານສິນເຊື່ອ",
+      "ກູ້ເງິນເດືອນ": "ພະນັກງານເອກະຊົນ ພະນັກງານລັດຖະກອນ",
+      "ເງິນເດືອນຄ້ຳ": "ພະນັກງານເອກະຊົນ ພະນັກງານລັດຖະກອນ",
+      
+      // ==========================================
+      // 3. ໝວດ ຫຼັກຊັບຄ້ຳປະກັນ (ຕາດິນ & ລົດ)
+      // ==========================================
+      "ຕາດິນ": "ໃບຕາດິນ",
+      "ໃບດິນ": "ໃບຕາດິນ",
+      "ໃບທີ່ດິນ": "ໃບຕາດິນ",
+      "ລົງພາກສະໜາມ": "ປະເມີນຫຼັກຊັບຄ້ຳປະກັນ",
+      "ປະເມີນດິນ": "ປະເມີນຫຼັກຊັບຄ້ຳປະກັນ",
+      "ປະເມີນເຮືອນ": "ປະເມີນຫຼັກຊັບຄ້ຳປະກັນ",
+      "ຄ່າປະເມີນຫຼັກຊັບ": "ຄ່າບໍລິການປະເມີນຫຼັກຊັບ",
+      "ປຶ້ມເຫຼືອງ": "ໃບທະບຽນລົດ ປື້ມເຫຼືອງ",
+      "ເອກະສານລົດ": "ໃບທະບຽນລົດ ປື້ມເຫຼືອງ",
+      "ຈຳລົດ": "ເອົາພາຫະນະຄໍ້າປະກັນ",
+      "ລົດຕິດຈີພີເອັດ": "ບໍລິການ GPS",
+      "ຕຳແໜ່ງລົດ": "GPS",
+      
+      // ==========================================
+      // 4. ໝວດ ການຊຳລະໜີ້ ແລະ ຕິດຕາມໜີ້ (Payment & Collection)
+      // ==========================================
+      "ດອກ": "ດອກເບ້ຍ",
+      "ຄ່າດອກ": "ດອກເບ້ຍ",
+      "ຕົ້ນ": "ຕົ້ນທຶນ",
+      "ທຶນ": "ຕົ້ນທຶນ",
+      "ຈ່າຍຄ່າງວດ": "ຊຳລະ",
+      "ສົ່ງເງິນ": "ຊຳລະ",
+      "ຈ່າຍຄືນ": "ຊຳລະ",
+      "ສົ່ງດອກ": "ຊຳລະ",
+      "ທວງໜີ້": "ຕິດຕາມໜີ້",
+      "ນຳໜີ້": "ຕິດຕາມໜີ້",
+      "ບໍລິຫານໜີ້ສິນ": "ຕິດຕາມໜີ້",
+      "ເກັບໜີ້": "ເກັບກູ້ ແລະ ການຕິດຕາມໜີ້",
+      "ໜີ້ເສຍ": "ໜີ້ສູນ ຕິດຕາມໜີ້ນອກຜັງ NPL",
+      "ໜີ້ NPL": "ໜີ້ສູນ ຕິດຕາມໜີ້ນອກຜັງ NPL",
+      "ໂຕນໜີ": "ຫຼົບຫຼີກການຊໍາລະ",
+      "ໜີໜີ້": "ຫຼົບຫຼີກການຊໍາລະ",
+      
+      // ==========================================
+      // 5. ໝວດ ເງິນຝາກ (Deposit)
+      // ==========================================
+      "ຝາກເງິນ": "ຮັບເງິນຝາກ",
+      "ຖອນເງິນ": "ຖອນເງິນຝາກ",
+      "ເບີກເງິນ": "ຖອນເງິນຝາກ ເບີກຈ່າຍເງິນ",
+      "ຖອນດອກ": "ຖອນດອກເບ້ຍເງິນຝາກ",
+      "ຝາກປະຢັດ": "ເງິນຝາກປະຢັດ",
+      "ຝາກປະຈຳ": "ເງິນຝາກມີກຳນົດ",
+      "ຝາກກຳນົດ": "ເງິນຝາກມີກຳນົດ",
+      
+      // ==========================================
+      // 6. ໝວດ ເອກະສານ ແລະ ອື່ນໆ (Documents & General)
+      // ==========================================
+      "ປຶ້ມສຳມະໂນ": "ສຳມະໂນຄົວ",
+      "ບັດປະຊາຊົນ": "ບັດປະຈຳຕົວ",
+      "ບັດປະຈຳໂຕ": "ບັດປະຈຳຕົວ",
+      "ບັດຊັ້ນ": "ໃບຢັ້ງຢືນຊັ້ນ",
+      "ມັດຈຳ": "ມັດຈຳເອກະສານ",
+      "ເງິນຈອງ": "ມັດຈຳເອກະສານ",
+      "ບິນ": "ໃບບິນ",
+      "ຫົວໜ້າໃຫຍ່": "ຜູ້ອຳນວຍການ",
+      "ພະນັກງານປ່ອຍກູ້": "ພະນັກງານບໍລິການ"
+  };
+  
+  // ວົນລູບກວດສອບ ຖ້າພົບຄຳສັບໃຫ້ແປງຮ່າງ
+  for (var key in synonyms) {
+      if (lowMsg.includes(key)) {
+          lowMsg += " " + synonyms[key]; 
+      }
+  }
+
   // 1. ดักคำถามกว้างๆ
   if (/ສະຫຼຸບ|ມີຂໍ້ມູນຫຍັງແດ່|ມີຫຍັງແດ່|ທັງໝົດ|ລວມ|ມີລະບຽບຫຍັງ|ລາຍລະອຽດຫຍັງ/i.test(lowMsg)) {
-      return fullText.substring(0, 15000); // ขยายโควตาสำหรับคำถามกว้างๆ
+      return fullText.substring(0, 15000); 
   }
 
   var questionWords = ["ເຈົ້າ", "ຂ້ອຍ", "ຂໍ້ມູນ", "ລາຍລະອຽດ", "ແນວໃດ", "ແມ່ນຫຍັງ", "ເທົ່າໃດ", "ຈັກມື້", "ໄດ້ບໍ່", "ອະທິບາຍ", "ກ່ຽວກັບ", "ຊ່ວຍ", "ບອກ", "ຂໍຖາມ", "ຊ່ວຍແດ່", "ຕ້ອງ", "ເຮັດ", "ມີ", "ໃດແດ່", "ຢາກ", "ການ", "ຂອງ", "ໃນ", "ແລະ", "ໃຫ້", "ຄື", "ດັ່ງນີ້", "ອື່ນໆ", "ວິທີ", "ຂັ້ນຕອນ"];
@@ -775,7 +915,7 @@ function extractRelevantContext(fullText, userMessage) {
 
      if (matchCount > 0) {
          var startIdx = Math.max(0, j - 3);
-         var endIdx = Math.min(paragraphs.length - 1, j + 35); // 🌟 ກວາດລົງໄປເລິກເຖິງ 35 ບັນທັດ! ເພື່ອບໍ່ໃຫ້ຂັ້ນຕອນຂາດຫາຍ
+         var endIdx = Math.min(paragraphs.length - 1, j + 35); 
          var chunkLines = [];
          
          for (var n = startIdx; n <= endIdx; n++) {
@@ -796,7 +936,6 @@ function extractRelevantContext(fullText, userMessage) {
   matchedChunks.sort(function(a, b) { return b.score - a.score; });
 
   var topChunks = [];
-  // 🌟 ຂະຫຍາຍໂຄຕ້າ! ເກັບເອົາ 8 ພາກສ່ວນທີ່ກົງກັນທີ່ສຸດ (ແຕ່ກ່ອນເອົາແຄ່ 3 ມັນເລີຍຕົກຫຼົ່ນ)
   for(var m = 0; m < Math.min(8, matchedChunks.length); m++){ 
      topChunks.push(matchedChunks[m].text);
   }

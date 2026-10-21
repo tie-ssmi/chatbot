@@ -65,8 +65,7 @@ body {
     flex: 1;
     min-height: 0;
     width: 100%;
-    height: calc(100% - var(--header-height) - var(--input-height));
-    padding-bottom: var(--input-height);
+    height: auto;
 }
 
 .chat-header { 
@@ -157,9 +156,7 @@ body {
     gap: 10px;
     align-items: center;
     flex-shrink: 0;
-    position: fixed;
-    bottom: 0;
-    left: 0;
+    position: relative;
     width: 100%;
     z-index: 10;
 
@@ -399,6 +396,10 @@ body {
     bottom: calc(100% + 15px); /* ให้เมนูเด้งขึ้นด้านบน */
     right: 0;
     width: 280px;
+    max-width: calc(100vw - 24px);
+    max-height: min(70vh, 520px, calc(100vh - var(--header-height) - var(--input-height) - 70px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
     background: #ffffff;
     border-radius: 16px;
     box-shadow: 0 8px 30px rgba(15, 47, 64, 0.2);
@@ -546,6 +547,21 @@ body {
     border-top-left-radius: 2px;
     border-bottom-left-radius: 2px;
 }
+
+.load-more-threads-btn {
+    width: 100%;
+    margin: 8px 0 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: white;
+    color: var(--primary-color);
+    font-family: 'Noto Sans Lao', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.load-more-threads-btn:hover { background: #eef5f8; }
 
 /* From Uiverse.io by Creatlydev */
 .button {

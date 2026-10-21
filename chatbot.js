@@ -79,6 +79,7 @@ function startNewChat() {
     appendMessage(welcomeHtml, 'bot-message', 'welcome-message', true);
     
     toggleSidebar();
+    updateActiveThread();
     loadChatThreads();
 }
 
@@ -94,35 +95,79 @@ function switchThread(sessionId) {
     loadChatHistory();
     
     toggleSidebar();
-    loadChatThreads(); 
+    updateActiveThread();
 }
 
 // 🌟 ดึงรายการห้องแชทมาโชว์ที่ Sidebar
-async function loadChatThreads() {
+const THREADS_PAGE_SIZE = 10;
+let threadOffset = 0;
+let threadHasMore = false;
+let isLoadingThreads = false;
+
+async function loadChatThreads(loadMore = false) {
     const userId = localStorage.getItem('ssmi_user_id');
+    const container = document.getElementById('thread-list-container');
+    if (!userId || !container || isLoadingThreads || (loadMore && !threadHasMore)) return;
+
+    isLoadingThreads = true;
+    const offset = loadMore ? threadOffset : 0;
+    if (!loadMore) {
+        threadOffset = 0;
+        threadHasMore = false;
+        container.innerHTML = '';
+    }
+
     try {
         const res = await fetch(CHATBOT_CONFIG.API_URL, {
             method: 'POST',
-            body: JSON.stringify({ action: 'getThreads', userId: userId }),
+            body: JSON.stringify({
+                action: 'getThreads',
+                userId: userId,
+                offset: offset,
+                limit: THREADS_PAGE_SIZE
+            }),
             headers: { 'Content-Type': 'text/plain;charset=utf-8' }
         });
         const data = await res.json();
-        const container = document.getElementById('thread-list-container');
-        if(!container) return;
-        container.innerHTML = '';
         
         if (data.threads && data.threads.length > 0) {
             data.threads.forEach(th => {
                 const div = document.createElement('div');
                 div.className = `thread-item ${th.sessionId === currentSessionId ? 'active' : ''}`;
+                div.dataset.sessionId = th.sessionId;
                 div.onclick = () => switchThread(th.sessionId);
                 div.innerText = '💬 ' + th.title;
                 container.appendChild(div);
             });
-        } else {
+            threadOffset = offset + data.threads.length;
+        } else if (!loadMore) {
             container.innerHTML = '<div style="color: #888; font-size: 0.8rem; text-align: center; margin-top: 20px;">ຍັງບໍ່ມີປະຫວັດການສົນທະນາ</div>';
         }
+        threadHasMore = Boolean(data.hasMore);
+        updateLoadMoreThreadsButton(container);
     } catch(e) { console.log(e); }
+    finally {
+        isLoadingThreads = false;
+    }
+}
+
+function updateLoadMoreThreadsButton(container) {
+    const existingButton = container.querySelector('.load-more-threads-btn');
+    if (existingButton) existingButton.remove();
+    if (!threadHasMore) return;
+
+    const button = document.createElement('button');
+    button.className = 'load-more-threads-btn';
+    button.type = 'button';
+    button.innerText = 'ໂຫຼດເພີ່ມເຕີມ';
+    button.onclick = () => loadChatThreads(true);
+    container.appendChild(button);
+}
+
+function updateActiveThread() {
+    document.querySelectorAll('#thread-list-container .thread-item').forEach(item => {
+        item.classList.toggle('active', item.dataset.sessionId === currentSessionId);
+    });
 }
 
 // ==========================================
