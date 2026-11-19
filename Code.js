@@ -527,10 +527,14 @@ function getKnowledgeByCategory(category) {
 
   try {
     var docMapping = {
-      "hr": [ "1XNF8eh4JHVYIrO0RwvzpXfZ5WxjWmwUX4wSSh0R1iQs" ], 
+      "hr": [ "1XNF8eh4JHVYIrO0RwvzpXfZ5WxjWmwUX4wSSh0R1iQs", "1SCkIg856AIJaN4TawdnyrljECI64u62hdj0AU9PcWnA" ],
       "expense": [ "1IK52pFGVvPzxeCQI-oFTWtOq2Ow4YetREmoazQdagoQ" ],
       "loan_gov": [ "1Vv66GTmGB1-jZJodwh6xSLwjQkBeBJAmVibw5TlSEy8" ],
-      "loan_sec": [ "1tsUFdW4If0nb4FPPuSVi3XvXGUHiUG12jYwacsJ6qn8" ],
+      "loan_sec": [
+          "1tsUFdW4If0nb4FPPuSVi3XvXGUHiUG12jYwacsJ6qn8",
+          "130htdNbFPiMdszA9Thg_Z_-XIACGdoCBHk-HMLZRDPc",
+          "1OgWz_fEBkr6yVAn_mP0F8YEVALzwIucZQhmX0FTqldw"
+      ],
       "deposit": [ "1ESnXlGbJTGH-rjLzjcEUsSNd9vA9PGajrKQLSQCGM5k" ],
       "process_hr": [ "1oC7n9ZHZYydt1Fy320cANNF-Qz4LTtghTbKJ5DxT1zk" ],
       "process_expense": [ "ໃສ່_ID_ໄຟລ໌_ຂະບວນການ_ບັນຊີ" ],

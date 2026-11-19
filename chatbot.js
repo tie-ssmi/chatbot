@@ -806,6 +806,8 @@ function speakText(text) {
     ttsAudio.pause();
 
     const cleanText = (text || '')
+        .replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, '$1') // [ข้อความ](url) -> อ่านแค่ข้อความ
+        .replace(/https?:\/\/\S+/g, ' ')                          // ไม่อ่าน URL เปล่า
         .replace(/<[^>]*>/g, ' ')
         .replace(/\*\*/g, '')
         .replace(/[#*_`]/g, ' ')
@@ -1081,10 +1083,15 @@ function forceStartPromptGuide() {
         startPromptGuide();
     }, 500);
 }
-// 🌟 ฟังก์ชันจัดรูปแบบข้อความบอท (แปลงลิงก์ให้กดได้ + ตัวหนา + ขึ้นบรรทัดใหม่)
 // ==========================================
 // 🌟 ระบบเปิด-ปิด Canvas ในหน้าแชท
 // ==========================================
+
+// ลิงก์ที่ฝังใน iframe ได้ (Google Drive / Docs / Sheets / Slides) — ลิงก์อื่นเปิดแท็บใหม่
+function isEmbeddableUrl(url) {
+    return /^https:\/\/(drive|docs)\.google\.com\//i.test(url);
+}
+
 function convertToEmbedUrl(url) {
     // 1. แปลงลิงก์ Google Drive (/view -> /preview)
     const driveMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
@@ -1101,20 +1108,31 @@ function convertToEmbedUrl(url) {
     return url;
 }
 
+let canvasHideTimer = null;
+
 function openCanvas(url) {
     const panel = document.getElementById('canvas-panel');
     const backdrop = document.getElementById('canvas-backdrop');
     const iframe = document.getElementById('canvas-iframe');
     const extLink = document.getElementById('canvas-external-link');
 
-    if (!panel || !iframe) return;
+    if (!panel || !iframe) {
+        window.open(url, '_blank', 'noopener');
+        return;
+    }
+
+    // ยกเลิก timer ซ่อน backdrop ที่ค้างจากการปิดครั้งก่อน
+    if (canvasHideTimer) {
+        clearTimeout(canvasHideTimer);
+        canvasHideTimer = null;
+    }
 
     iframe.src = convertToEmbedUrl(url);
     if (extLink) extLink.href = url;
 
-    backdrop.style.display = 'block';
+    if (backdrop) backdrop.style.display = 'block';
     setTimeout(() => {
-        backdrop.classList.add('show');
+        if (backdrop) backdrop.classList.add('show');
         panel.classList.add('open');
     }, 10);
 }
@@ -1127,32 +1145,69 @@ function closeCanvas() {
     if (panel) panel.classList.remove('open');
     if (backdrop) {
         backdrop.classList.remove('show');
-        setTimeout(() => { backdrop.style.display = 'none'; }, 300);
+        if (canvasHideTimer) clearTimeout(canvasHideTimer);
+        canvasHideTimer = setTimeout(() => {
+            backdrop.style.display = 'none';
+            canvasHideTimer = null;
+        }, 300);
     }
     // ล้าง src ออกตอนปิด เพื่อหยุดโหลดหรือหยุดวิดีโอที่กำลังเล่นอยู่
     if (iframe) iframe.src = '';
 }
 
-// 🌟 จัดรูปแบบข้อความบอท (เปลี่ยนลิงก์ให้เป็นปุ่มกดเปิด Canvas)
+// คลิกลิงก์ในข้อความบอท: ลิงก์ Google เปิดใน Canvas, ลิงก์อื่น / Ctrl+คลิก / คลิกกลาง ปล่อยให้เปิดแท็บใหม่ตามปกติ
+document.addEventListener('click', (e) => {
+    const link = e.target.closest && e.target.closest('a.canvas-link-btn');
+    if (!link) return;
+    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    const url = link.getAttribute('href');
+    if (!isEmbeddableUrl(url)) return;
+    e.preventDefault();
+    openCanvas(url);
+});
+
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function buildLinkHtml(url, label) {
+    const icon = isEmbeddableUrl(url) ? '📄' : '🔗';
+    return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="canvas-link-btn">${icon} ${label}</a>`;
+}
+
+// 🌟 จัดรูปแบบข้อความบอท (escape HTML + แปลงลิงก์ + ตัวหนา + ขึ้นบรรทัดใหม่)
+// แปลงลิงก์ทั้งแบบ Markdown และ URL เปล่าในรอบเดียว (ไม่ใช้ lookbehind เพื่อรองรับ Safari รุ่นเก่า)
+const LINK_PATTERN = /\[([^\]\n]+)\]\((https?:\/\/[^\s()<>"']+)\)|(https?:\/\/[A-Za-z0-9\-._~:/?#@!$&+,;=%]+)/g;
+
 function formatBotMessage(text) {
     if (!text) return "";
 
-    // 1. แปลงลิงก์แบบ Markdown: [ข้อความ](https://...)
-    let formatted = text.replace(
-        /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
-        '<a href="javascript:void(0)" class="canvas-link-btn" onclick="openCanvas(\'$2\')">📄 $1</a>'
-    );
+    let html = '';
+    let last = 0;
+    let m;
+    LINK_PATTERN.lastIndex = 0;
+    while ((m = LINK_PATTERN.exec(text)) !== null) {
+        html += escapeHtml(text.slice(last, m.index));
+        if (m[2]) {
+            // [ข้อความ](https://...)
+            html += buildLinkHtml(m[2], escapeHtml(m[1]));
+            last = LINK_PATTERN.lastIndex;
+        } else {
+            // URL เปล่า: ตัดเครื่องหมายวรรคตอนท้าย URL ออก
+            const url = m[3].replace(/[.,;:!?]+$/, '');
+            html += buildLinkHtml(url, 'ກົດລີ້ງທີ່ນີ້ເພື່ອເປີດ');
+            last = m.index + url.length;
+            LINK_PATTERN.lastIndex = last;
+        }
+    }
+    html += escapeHtml(text.slice(last));
 
-    // 2. แปลงลิงก์ URL ตรงๆ (ข้ามลิงก์ที่อยู่ใน onclick แล้ว)
-    formatted = formatted.replace(
-        /(?<!openCanvas\(')(https?:\/\/[^\s<]+)/g,
-        '<a href="javascript:void(0)" class="canvas-link-btn" onclick="openCanvas(\'$1\')">📄 ກົດລີ້ງທີ່ນີ້ເພື່ອເປີດ</a>'
-    );
-
-    // 3. แปลงตัวหนาและขึ้นบรรทัดใหม่
-    formatted = formatted
+    return html
         .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
         .replace(/\n/g, '<br>');
-
-    return formatted;
 }
