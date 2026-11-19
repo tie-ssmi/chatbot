@@ -841,3 +841,142 @@ input:checked + .slider:before { transform: translateX(22px); }
     color: var(--primary-color);
     box-shadow: 0 2px 6px rgba(0,0,0,0.08);
 }
+/* =========================================
+   🌟 CSS สำหรับหน้าต่าง Canvas (สไลด์เปิดดูเอกสารในแชท)
+   ========================================= */
+.canvas-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 47, 64, 0.45);
+    backdrop-filter: blur(2px);
+    z-index: 9998;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+.canvas-backdrop.show {
+    display: block;
+    opacity: 1;
+}
+
+.canvas-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 55vw;
+    max-width: 780px;
+    height: 100vh;
+    background: #ffffff;
+    box-shadow: -8px 0 30px rgba(15, 47, 64, 0.22);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.canvas-panel.open {
+    transform: translateX(0);
+}
+
+.canvas-header {
+    background: var(--primary-color);
+    color: #ffffff;
+    padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.canvas-title {
+    font-family: 'Noto Sans Lao', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.canvas-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.canvas-ext-btn {
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-family: 'Noto Sans Lao', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: 0.2s;
+}
+.canvas-ext-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.canvas-close-btn {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s;
+}
+.canvas-close-btn:hover {
+    background: #e86355;
+}
+
+.canvas-body {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    background: #f2f6f8;
+}
+.canvas-body iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* ปุ่มเปิด Canvas ในกล่องข้อความแชท */
+.canvas-link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 4px 0;
+    padding: 6px 12px;
+    background: #eef5f8;
+    color: var(--primary-color);
+    border: 1px solid #c8dae2;
+    border-radius: 10px;
+    font-family: 'Noto Sans Lao', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: 0.2s;
+    word-break: break-all;
+}
+.canvas-link-btn:hover {
+    background: #dceaf1;
+}
+
+/* มือถือให้ขยายเต็มจอ */
+@media (max-width: 768px) {
+    .canvas-panel {
+        width: 100vw;
+        max-width: 100vw;
+    }
+}

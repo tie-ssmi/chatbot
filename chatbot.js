@@ -240,7 +240,7 @@ async function loadChatHistory(isLoadMore = false) {
                 const botDiv = document.createElement('div');
                 botDiv.className = `message bot-message`;
                 if (!item.answer.includes("API Error")) {
-                    botDiv.innerHTML = item.answer.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+                    botDiv.innerHTML = formatBotMessage(item.answer);
                 } else {
                     botDiv.textContent = "⚠️ ຂໍອະໄພ, ຂໍ້ຄວາມນີ້ເກີດຂໍ້ຜິດພາດ";
                 }
@@ -388,7 +388,7 @@ async function sendMessage() {
         removeMessage(loadingId);
 
        if (data.reply) {
-            const formattedReply = data.reply.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+            const formattedReply = formatBotMessage(data.reply);
             appendMessage(formattedReply, 'bot-message', null, true);
             currentChatHistory.push({ role: 'user', message: text });
             currentChatHistory.push({ role: 'assistant', message: data.reply });
@@ -1080,4 +1080,79 @@ function forceStartPromptGuide() {
     setTimeout(() => {
         startPromptGuide();
     }, 500);
+}
+// 🌟 ฟังก์ชันจัดรูปแบบข้อความบอท (แปลงลิงก์ให้กดได้ + ตัวหนา + ขึ้นบรรทัดใหม่)
+// ==========================================
+// 🌟 ระบบเปิด-ปิด Canvas ในหน้าแชท
+// ==========================================
+function convertToEmbedUrl(url) {
+    // 1. แปลงลิงก์ Google Drive (/view -> /preview)
+    const driveMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (driveMatch) {
+        return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+    }
+
+    // 2. แปลงลิงก์ Google Docs / Sheets / Slides (/edit -> /preview)
+    const docsMatch = url.match(/docs\.google\.com\/(document|spreadsheets|presentation)\/d\/([a-zA-Z0-9_-]+)/);
+    if (docsMatch) {
+        return `https://docs.google.com/${docsMatch[1]}/d/${docsMatch[2]}/preview`;
+    }
+
+    return url;
+}
+
+function openCanvas(url) {
+    const panel = document.getElementById('canvas-panel');
+    const backdrop = document.getElementById('canvas-backdrop');
+    const iframe = document.getElementById('canvas-iframe');
+    const extLink = document.getElementById('canvas-external-link');
+
+    if (!panel || !iframe) return;
+
+    iframe.src = convertToEmbedUrl(url);
+    if (extLink) extLink.href = url;
+
+    backdrop.style.display = 'block';
+    setTimeout(() => {
+        backdrop.classList.add('show');
+        panel.classList.add('open');
+    }, 10);
+}
+
+function closeCanvas() {
+    const panel = document.getElementById('canvas-panel');
+    const backdrop = document.getElementById('canvas-backdrop');
+    const iframe = document.getElementById('canvas-iframe');
+
+    if (panel) panel.classList.remove('open');
+    if (backdrop) {
+        backdrop.classList.remove('show');
+        setTimeout(() => { backdrop.style.display = 'none'; }, 300);
+    }
+    // ล้าง src ออกตอนปิด เพื่อหยุดโหลดหรือหยุดวิดีโอที่กำลังเล่นอยู่
+    if (iframe) iframe.src = '';
+}
+
+// 🌟 จัดรูปแบบข้อความบอท (เปลี่ยนลิงก์ให้เป็นปุ่มกดเปิด Canvas)
+function formatBotMessage(text) {
+    if (!text) return "";
+
+    // 1. แปลงลิงก์แบบ Markdown: [ข้อความ](https://...)
+    let formatted = text.replace(
+        /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+        '<a href="javascript:void(0)" class="canvas-link-btn" onclick="openCanvas(\'$2\')">📄 $1</a>'
+    );
+
+    // 2. แปลงลิงก์ URL ตรงๆ (ข้ามลิงก์ที่อยู่ใน onclick แล้ว)
+    formatted = formatted.replace(
+        /(?<!openCanvas\(')(https?:\/\/[^\s<]+)/g,
+        '<a href="javascript:void(0)" class="canvas-link-btn" onclick="openCanvas(\'$1\')">📄 ກົດລີ້ງທີ່ນີ້ເພື່ອເປີດ</a>'
+    );
+
+    // 3. แปลงตัวหนาและขึ้นบรรทัดใหม่
+    formatted = formatted
+        .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+        .replace(/\n/g, '<br>');
+
+    return formatted;
 }

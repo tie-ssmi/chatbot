@@ -123,7 +123,7 @@
           <div class="header-text">
             <span id="bot-title">SINA</span>
             <small>AI ຊ່ວຍຕອບຄຳຖາມກ່ຽວກັບ ສິນຊັບເມືອງເໜືອ</small>
-            <small>v 0.0.7.6</small>
+            <small>v 0.0.7.7</small>
           </div>
         </div>
 
@@ -145,7 +145,7 @@
                   <img src="Nrng-Khai.png" alt="SINA Logo" class="settings-bot-logo">
                   <h1>SINA Chatbot</h1>
                   <p>AI ຜູ້ຊ່ວຍອັດສະລິຍະ ສິນຊັບເມືອງເໜືອ</p>
-                  <span class="settings-version">v 0.0.7.6</span>
+                  <span class="settings-version">v 0.0.7.7</span>
               </div>
               
               <hr class="settings-divider">
@@ -446,7 +446,7 @@
             <div class="model-item" onclick="selectModel('other', 'ອື່ນໆ', this)">
               <div class="model-text">
                 <div class="model-title">🌐 ອື່ນໆ (ນອກເໜືອລະບຽບ)</div>
-                <div class="model-desc">ສຳລັບຄຳຖາມທົ່ວໄປ, ຊ່ວຍຄິດ, ແປພາສາ</div>
+                <div class="model-desc">ສຳລັບຂໍ້ມູນທີ່ບໍ່ໄດ້ນອນຢູ່ໃນລະບຽບການໃດໜຶ່ງ</div>
               </div>
               <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
             </div>
@@ -473,6 +473,22 @@
     <div id="image-modal" class="image-modal" onclick="closeModal()">
       <span class="close-modal">&times;</span>
       <img class="modal-content" id="modal-img" />
+    </div>
+    <!-- 🌟 หน้าต่าง Canvas สำหรับเปิดดูลิงก์/เอกสารในแชท -->
+    <div id="canvas-backdrop" class="canvas-backdrop" onclick="closeCanvas()"></div>
+    <div id="canvas-panel" class="canvas-panel">
+      <div class="canvas-header">
+        <div class="canvas-title">📄 ເອກະສານປະກອບ (Canvas)</div>
+        <div class="canvas-actions">
+          <a id="canvas-external-link" href="#" target="_blank" rel="noopener noreferrer" class="canvas-ext-btn" title="ເປີດໃນແທັບໃໝ່">
+            ↗ ເປີດແທັບໃໝ່
+          </a>
+          <button class="canvas-close-btn" onclick="closeCanvas()" title="ປິດ">✕</button>
+        </div>
+      </div>
+      <div class="canvas-body">
+        <iframe id="canvas-iframe" src="" allow="autoplay" allowfullscreen></iframe>
+      </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/intro.js/minified/intro.min.js"></script>
     <script src="config.js"></script>
@@ -585,6 +601,7 @@
           document.getElementById('tab-content-proc').style.display = 'block';
         }
       }
+      
     </script>
   </body>
 </html>

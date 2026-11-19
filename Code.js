@@ -521,59 +521,42 @@ function getChatThreads(userId, offset, limit) {
 // ==========================================
 function getKnowledgeByCategory(category) {
   var cache = CacheService.getScriptCache();
-  var cacheKey = "DOC_FILE_MULTI_V7_" + category;
+  var cacheKey = "DOC_FILE_MULTI_V9_" + category;
   var cachedData = cache.get(cacheKey);
   if (cachedData) return cachedData; 
 
   try {
-    // 🌟 ใส่ ID แบบครอบด้วย [ ] เพื่อให้ใส่ได้หลายไฟล์ (คั่นด้วยลูกน้ำ)
     var docMapping = {
-      "hr": [
-          "1XNF8eh4JHVYIrO0RwvzpXfZ5WxjWmwUX4wSSh0R1iQs",
-          "1SCkIg856AIJaN4TawdnyrljECI64u62hdj0AU9PcWnA" // มีไฟล์เดียวก็ใส่ในวงเล็บเหลี่ยม
-      ], 
-      "expense": [
-          "1IK52pFGVvPzxeCQI-oFTWtOq2Ow4YetREmoazQdagoQ"
-      ],
-      "loan_gov": [
-          "1Vv66GTmGB1-jZJodwh6xSLwjQkBeBJAmVibw5TlSEy8"
-      ],
-      "loan_sec": [
-          "1tsUFdW4If0nb4FPPuSVi3XvXGUHiUG12jYwacsJ6qn8",
-          "130htdNbFPiMdszA9Thg_Z_-XIACGdoCBHk-HMLZRDPc",
-          "1OgWz_fEBkr6yVAn_mP0F8YEVALzwIucZQhmX0FTqldw"
-      ],
-      "deposit": [
-          "1ESnXlGbJTGH-rjLzjcEUsSNd9vA9PGajrKQLSQCGM5k" // 🌟 จะ 3 ไฟล์ หรือ 4 ไฟล์ก็ใส่ต่อกันมาได้เลยครับ
-      ],
-      "other": [
-        "1z7e_lwQEpGI7uxYqoOE04ifh660Nh_0U6rqNGr6iTvs"
-        ],
-        "process_hr": [ "1oC7n9ZHZYydt1Fy320cANNF-Qz4LTtghTbKJ5DxT1zk"//ມາດຕະຖານການເຮັດວຽກຂອງບໍລິຫານ
-         ],
+      "hr": [ "1XNF8eh4JHVYIrO0RwvzpXfZ5WxjWmwUX4wSSh0R1iQs" ], 
+      "expense": [ "1IK52pFGVvPzxeCQI-oFTWtOq2Ow4YetREmoazQdagoQ" ],
+      "loan_gov": [ "1Vv66GTmGB1-jZJodwh6xSLwjQkBeBJAmVibw5TlSEy8" ],
+      "loan_sec": [ "1tsUFdW4If0nb4FPPuSVi3XvXGUHiUG12jYwacsJ6qn8" ],
+      "deposit": [ "1ESnXlGbJTGH-rjLzjcEUsSNd9vA9PGajrKQLSQCGM5k" ],
+      "process_hr": [ "1oC7n9ZHZYydt1Fy320cANNF-Qz4LTtghTbKJ5DxT1zk" ],
       "process_expense": [ "ໃສ່_ID_ໄຟລ໌_ຂະບວນການ_ບັນຊີ" ],
       "process_loan_gov": [ "ໃສ່_ID_ໄຟລ໌_ຂະບວນການ_ສິນເຊື່ອລັດ" ],
       "process_loan_sec": [ "ໃສ່_ID_ໄຟລ໌_ຂະບວນການ_ສິນເຊື່ອຫຼັກຊັບ" ],
-      "process_it": [
-        "169JoZ-f2WS2NWpHkaAJvKcrfnx_LUb_xggpyJDFY34s"
-      ],
+      "process_it": [ "169JoZ-f2WS2NWpHkaAJvKcrfnx_LUb_xggpyJDFY34s" ],
+      "other": [ "1z7e_lwQEpGI7uxYqoOE04ifh660Nh_0U6rqNGr6iTvs" ]
     };
 
     var targetDocIds = docMapping[category] || docMapping["hr"];
     var extractedText = "--- [ຂໍ້ມູນລະບຽບການ] ---\n\n";
     
-    // 🌟 ย้ายฟังก์ชันอ่านแท็บมาไว้ข้างนอก loop เพื่อให้โค้ดดึงข้อมูลได้ 100% ไม่ทับซ้อนกัน
+    // 🌟 ดึงข้อมูลจากทุกแท็บ และแยกเนื้อหาของแต่ละแท็บ
     function extractAllTabsRecursive(tabs) {
         var textResult = "";
         for (var t = 0; t < tabs.length; t++) {
             var tab = tabs[t];
             var docTab = tab.asDocumentTab();
             if (docTab) {
-                textResult += "--- [ຊື່ແທັບ: " + tab.getTitle() + "] ---\n" + docTab.getBody().getText() + "\n\n";
+                // 🌟 เพิ่มชื่อแท็บกำกับไว้ เพื่อให้ AI รู้ว่ากำลังอ่านหมวดไหน
+                textResult += "--- [ຊື່ແທັບ: " + tab.getTitle() + "] ---\n";
+                textResult += docTab.getBody().getText() + "\n\n";
             }
             var childTabs = tab.getChildTabs();
             if (childTabs && childTabs.length > 0) {
-                textResult += extractAllTabsRecursive(childTabs); // ดึงแท็บย่อยซ้อนแท็บย่อย
+                textResult += extractAllTabsRecursive(childTabs); 
             }
         }
         return textResult;
@@ -595,7 +578,6 @@ function getKnowledgeByCategory(category) {
         }
     }
 
-    // ถ้าดึงเนื้อหาสำเร็จ ให้จำไว้ (รอบนี้จะจำทั้ง 3 ไฟล์รวมกันเลย)
     if (extractedText !== "--- [ຂໍ້ມູນລະບຽບການ] ---\n\n") { 
         try { cache.put(cacheKey, extractedText, 3600); } catch(e) {} 
     }
